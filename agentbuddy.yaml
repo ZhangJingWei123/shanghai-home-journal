@@ -1,0 +1,6 @@
+schema: "1.0"
+extensions:
+  - identifier: skills:github.com/teachingai/full-stack-skills/ios-swift
+    agents:
+      - trae
+    link: copy

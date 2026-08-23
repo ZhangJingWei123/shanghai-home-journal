@@ -1,0 +1,9 @@
+lockfileVersion: "1.0"
+extensions:
+  - identifier: skills:github.com/teachingai/full-stack-skills/ios-swift:1.0.1
+    agents:
+      - trae
+    link: copy
+    source:
+      kind: zip
+      blob_digest: sha256:14adf42c6854c918d784f31b63ad07a0a910480a4bf91095a109add9cd8458c0
