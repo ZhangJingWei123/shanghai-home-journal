@@ -1,26 +1,52 @@
 import MapKit
 import SwiftUI
 
+private enum AppTab: Hashable {
+    case home
+    case map
+    case journal
+    case ai
+    case plan
+}
+
 struct RootView: View {
     @EnvironmentObject private var store: PropertyStore
     @State private var showAdd = false
+    @State private var selectedTab: AppTab
+
+    init() {
+        let arguments = ProcessInfo.processInfo.arguments
+        let initialTab: AppTab = if arguments.contains("-showMap") {
+            .map
+        } else if arguments.contains("-showAI") {
+            .ai
+        } else {
+            .home
+        }
+        _selectedTab = State(initialValue: initialTab)
+    }
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             HomeView(showAdd: $showAdd)
                 .tabItem { Label("今日", systemImage: "sparkles") }
+                .tag(AppTab.home)
 
             PropertyMapView()
                 .tabItem { Label("地图", systemImage: "map.fill") }
+                .tag(AppTab.map)
 
             JournalView(showAdd: $showAdd)
                 .tabItem { Label("看房", systemImage: "text.book.closed.fill") }
+                .tag(AppTab.journal)
 
             AIAdvisorView()
                 .tabItem { Label("AI", systemImage: "wand.and.stars") }
+                .tag(AppTab.ai)
 
             BuyingPlanView()
                 .tabItem { Label("规划", systemImage: "checklist") }
+                .tag(AppTab.plan)
         }
         .sheet(isPresented: $showAdd) {
             AddPropertyView { listing in
@@ -200,7 +226,7 @@ private struct PropertyMapView: View {
     @State private var position: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737),
-            span: MKCoordinateSpan(latitudeDelta: 0.34, longitudeDelta: 0.38)
+            span: MKCoordinateSpan(latitudeDelta: 0.34, longitudeDelta: 0.50)
         )
     )
     @State private var selectedID: UUID?

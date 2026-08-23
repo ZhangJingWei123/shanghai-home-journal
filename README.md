@@ -3,6 +3,14 @@
 沪居是一款面向上海首次购房者的 iOS 看房决策日志。它不复制房源平台，
 而是把预算、板块调研、现场证据、AI 复盘和购房流程放进同一个私人工作台。
 
+## 界面
+
+<p>
+  <img src="docs/screenshots/home.png" width="30%" alt="沪居首页">
+  <img src="docs/screenshots/map.png" width="30%" alt="上海看房足迹地图">
+  <img src="docs/screenshots/ai.png" width="30%" alt="AI 决策助手">
+</p>
+
 ## 当前原型
 
 - 上海地图看房足迹，按候选、复看、已看和排除显示状态。
