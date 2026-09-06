@@ -45,7 +45,7 @@ validate_screenshots() {
     height="$(sips -g pixelHeight "$screenshot" | awk '/pixelHeight/ { print $2 }')"
     has_alpha="$(sips -g hasAlpha "$screenshot" | awk '/hasAlpha/ { print $2 }')"
 
-    if [[ "$width" != "1290" || "$height" != "2796" ]]; then
+    if [[ "$width" != "1284" || "$height" != "2778" ]]; then
       printf 'Invalid screenshot dimensions for %s: %sx%s.\n' \
         "$screenshot" "$width" "$height" >&2
       exit 1

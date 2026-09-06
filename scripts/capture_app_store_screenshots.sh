@@ -7,6 +7,8 @@ OUTPUT="$ROOT/AppStore/screenshots/zh-Hans"
 DEVICE_ID="${DEVICE_ID:-2740D087-F6B2-4352-A330-C86ACD73D71D}"
 BUNDLE_ID="com.zhangjingwei.huju"
 APP_PATH="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/HuJu.app"
+SCREENSHOT_WIDTH=1284
+SCREENSHOT_HEIGHT=2778
 
 mkdir -p "$OUTPUT"
 cd "$ROOT"
@@ -47,7 +49,8 @@ capture() {
 
   opaque_jpeg="$(mktemp /tmp/huju-screenshot.XXXXXX.jpg)"
   sips -s format jpeg -s formatOptions 100 "$screenshot" --out "$opaque_jpeg" >/dev/null
-  sips -s format png "$opaque_jpeg" --out "$screenshot" >/dev/null
+  sips -s format png -z "$SCREENSHOT_HEIGHT" "$SCREENSHOT_WIDTH" \
+    "$opaque_jpeg" --out "$screenshot" >/dev/null
   rm -f "$opaque_jpeg"
 }
 
