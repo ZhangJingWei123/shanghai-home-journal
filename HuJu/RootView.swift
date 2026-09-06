@@ -282,7 +282,7 @@ private struct HomeView: View {
 
     private var emptyWorkspace: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: "house.badge.plus")
+            Image(systemName: "house.fill")
                 .font(.system(size: 34))
                 .foregroundStyle(HuJuTheme.green)
 

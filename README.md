@@ -80,6 +80,25 @@ python3 scripts/update_market_data.py --start-year 2024 --end-year 2026
 微信登录客户端原型保留在代码中，但 1.0 版本不展示该入口。待开放平台、服务端换票、
 账号删除和隐私披露完整上线后再启用。
 
+## App Store 发布
+
+发布前需在 Xcode 的 `Settings > Accounts` 中登录开发者账号，并确认 App ID
+`com.zhangjingwei.huju` 已启用 Sign in with Apple。
+
+```bash
+# 检查发行证书与工程配置
+./scripts/release_ios.sh preflight
+
+# 正式归档并导出 IPA
+./scripts/release_ios.sh all
+
+# 使用已验证的 Archive 上传 App Store Connect
+./scripts/release_ios.sh upload
+```
+
+脚本会校验发行签名、Bundle ID、嵌入的 provisioning profile 和 Sign in with Apple
+entitlement。归档、IPA 和过程日志保存在忽略提交的 `artifacts/` 目录。
+
 ## Skills
 
 AgentBuddy 已将 `ios-swift` 1.0.1 项目级安装到 `.trae/skills/ios-swift`。
