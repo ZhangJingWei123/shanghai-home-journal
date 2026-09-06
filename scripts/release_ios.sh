@@ -33,12 +33,46 @@ require_file() {
   fi
 }
 
+validate_screenshots() {
+  local screenshot
+  local width
+  local height
+  local has_alpha
+  local count=0
+
+  while IFS= read -r screenshot; do
+    width="$(sips -g pixelWidth "$screenshot" | awk '/pixelWidth/ { print $2 }')"
+    height="$(sips -g pixelHeight "$screenshot" | awk '/pixelHeight/ { print $2 }')"
+    has_alpha="$(sips -g hasAlpha "$screenshot" | awk '/hasAlpha/ { print $2 }')"
+
+    if [[ "$width" != "1290" || "$height" != "2796" ]]; then
+      printf 'Invalid screenshot dimensions for %s: %sx%s.\n' \
+        "$screenshot" "$width" "$height" >&2
+      exit 1
+    fi
+    if [[ "$has_alpha" != "no" ]]; then
+      printf 'Screenshot contains an alpha channel: %s\n' "$screenshot" >&2
+      exit 1
+    fi
+    count=$((count + 1))
+  done < <(
+    find "$ROOT/AppStore/screenshots/zh-Hans" \
+      -maxdepth 1 -type f -name '*.png' -print | sort
+  )
+
+  if [[ "$count" -ne 7 ]]; then
+    printf 'Expected 7 App Store screenshots, found %s.\n' "$count" >&2
+    exit 1
+  fi
+}
+
 preflight() {
   require_file "$XCODEBUILD"
   require_file "$ROOT/HuJu.xcodeproj"
   require_file "$ROOT/HuJu/HuJu.entitlements"
   require_file "$ROOT/AppStore/ExportOptions.plist"
   require_file "$ROOT/AppStore/UploadOptions.plist"
+  validate_screenshots
 
   if ! security find-identity -v -p codesigning \
     | grep -Fq "Apple Distribution:"; then

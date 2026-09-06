@@ -38,15 +38,22 @@ xcrun simctl install "$DEVICE_ID" "$APP_PATH"
 capture() {
   local output="$1"
   local delay="$2"
+  local screenshot="$OUTPUT/$output"
+  local opaque_jpeg
   shift 2
   xcrun simctl launch --terminate-running-process "$DEVICE_ID" "$BUNDLE_ID" "$@"
   sleep "$delay"
-  xcrun simctl io "$DEVICE_ID" screenshot "$OUTPUT/$output"
+  xcrun simctl io "$DEVICE_ID" screenshot "$screenshot"
+
+  opaque_jpeg="$(mktemp /tmp/huju-screenshot.XXXXXX.jpg)"
+  sips -s format jpeg -s formatOptions 100 "$screenshot" --out "$opaque_jpeg" >/dev/null
+  sips -s format png "$opaque_jpeg" --out "$screenshot" >/dev/null
+  rm -f "$opaque_jpeg"
 }
 
 capture "01-empty-workspace.png" 3
 capture "02-optional-login.png" 3 -showLogin
-capture "03-home-demo.png" 3 -uiTestAuthenticated -loadSampleData
+capture "03-home-demo.png" 10 -uiTestAuthenticated -loadSampleData
 capture "04-map-demo.png" 5 -uiTestAuthenticated -loadSampleData -showMap
 capture "05-journal-demo.png" 3 -uiTestAuthenticated -loadSampleData -showJournal
 capture "06-decision-demo.png" 3 -uiTestAuthenticated -loadSampleData -showAI
