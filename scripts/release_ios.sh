@@ -123,7 +123,7 @@ validate_archive() {
     plutil -extract Entitlements.application-identifier raw -o - "$profile_plist"
   )"
   apple_sign_in="$(
-    plutil -extract Entitlements.com.apple.developer.applesignin.0 raw \
+    plutil -extract 'Entitlements.com\.apple\.developer\.applesignin.0' raw \
       -o - "$profile_plist" 2>/dev/null || true
   )"
   rm -f "$profile_plist"
