@@ -55,12 +55,11 @@ capture() {
 }
 
 capture "01-empty-workspace.png" 3
-capture "02-optional-login.png" 3 -showLogin
-capture "03-home-demo.png" 10 -uiTestAuthenticated -loadSampleData
-capture "04-map-demo.png" 5 -uiTestAuthenticated -loadSampleData -showMap
-capture "05-journal-demo.png" 3 -uiTestAuthenticated -loadSampleData -showJournal
-capture "06-decision-demo.png" 3 -uiTestAuthenticated -loadSampleData -showAI
-capture "07-market-demo.png" 3 -uiTestAuthenticated -loadSampleData -showRadar
+capture "02-home-demo.png" 10 -loadSampleData
+capture "03-map-demo.png" 5 -loadSampleData -showMap
+capture "04-journal-demo.png" 3 -loadSampleData -showJournal
+capture "05-decision-demo.png" 3 -loadSampleData -showAI
+capture "06-market-demo.png" 3 -loadSampleData -showRadar
 
 xcrun simctl status_bar "$DEVICE_ID" clear
 printf 'screenshots=%s\n' "$OUTPUT"

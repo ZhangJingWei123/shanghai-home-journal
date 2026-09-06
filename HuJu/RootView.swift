@@ -211,7 +211,6 @@ struct RootView: View {
 
 private struct HomeView: View {
     @EnvironmentObject private var store: PropertyStore
-    @EnvironmentObject private var authentication: AuthenticationStore
     @Binding var showAdd: Bool
     @State private var showAccount = false
     @State private var showBudgetEditor = false
@@ -291,7 +290,7 @@ private struct HomeView: View {
                     Text("选个家")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(HuJuTheme.green)
-                    Text("你好，\(authentication.currentUser?.displayName ?? "看房人")")
+                    Text("你好，看房人")
                         .font(.caption)
                         .foregroundStyle(HuJuTheme.muted)
                 }
@@ -319,7 +318,6 @@ private struct HomeView: View {
             }
             .sheet(isPresented: $showAccount) {
                 AccountView()
-                    .environmentObject(authentication)
             }
 
             VStack(alignment: .leading, spacing: 7) {

@@ -60,8 +60,8 @@ validate_screenshots() {
       -maxdepth 1 -type f -name '*.png' -print | sort
   )
 
-  if [[ "$count" -ne 7 ]]; then
-    printf 'Expected 7 App Store screenshots, found %s.\n' "$count" >&2
+  if [[ "$count" -ne 6 ]]; then
+    printf 'Expected 6 App Store screenshots, found %s.\n' "$count" >&2
     exit 1
   fi
 }
@@ -102,7 +102,6 @@ validate_archive() {
   local profile_plist
   local actual_bundle_id
   local profile_app_id
-  local apple_sign_in
 
   require_file "$ARCHIVE_PATH/Info.plist"
   require_file "$app_path/Info.plist"
@@ -122,20 +121,11 @@ validate_archive() {
   profile_app_id="$(
     plutil -extract Entitlements.application-identifier raw -o - "$profile_plist"
   )"
-  apple_sign_in="$(
-    plutil -extract 'Entitlements.com\.apple\.developer\.applesignin.0' raw \
-      -o - "$profile_plist" 2>/dev/null || true
-  )"
   rm -f "$profile_plist"
 
   if [[ "$profile_app_id" != "$TEAM_ID.$BUNDLE_ID" ]]; then
     printf 'Provisioning profile app identifier is %s, expected %s.%s.\n' \
       "$profile_app_id" "$TEAM_ID" "$BUNDLE_ID" >&2
-    exit 1
-  fi
-
-  if [[ "$apple_sign_in" != "Default" ]]; then
-    printf 'Provisioning profile does not include Sign in with Apple.\n' >&2
     exit 1
   fi
 
@@ -154,7 +144,8 @@ archive_app() {
     clean archive 2>&1 | tee "$ARTIFACTS/archive.log"; then
     cat >&2 <<'EOF'
 Archive failed. In Xcode, open Settings > Accounts and sign in again, then
-ensure com.zhangjingwei.huju has the Sign in with Apple capability enabled.
+ensure the signing certificate and provisioning profile for
+com.zhangjingwei.huju are available.
 EOF
     exit 1
   fi

@@ -14,8 +14,7 @@
 		100000000000000000000005 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000005 /* RootView.swift */; };
 		100000000000000000000006 /* HuJuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000006 /* HuJuTests.swift */; };
 		100000000000000000000009 /* MarketData.json in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* MarketData.json */; };
-		10000000000000000000000A /* Authentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000A /* Authentication.swift */; };
-		10000000000000000000000B /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B /* LoginView.swift */; };
+		10000000000000000000000B /* PrivacyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B /* PrivacyView.swift */; };
 		10000000000000000000000C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* Assets.xcassets */; };
 		10000000000000000000000D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000E /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
@@ -40,8 +39,7 @@
 		200000000000000000000007 /* HuJu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HuJu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		200000000000000000000008 /* HuJuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HuJuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		200000000000000000000009 /* MarketData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MarketData.json; sourceTree = "<group>"; };
-		20000000000000000000000A /* Authentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Authentication.swift; sourceTree = "<group>"; };
-		20000000000000000000000B /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		20000000000000000000000B /* PrivacyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyView.swift; sourceTree = "<group>"; };
 		20000000000000000000000C /* HuJu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HuJu.entitlements; sourceTree = "<group>"; };
 		20000000000000000000000D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		20000000000000000000000E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -83,8 +81,7 @@
 				200000000000000000000004 /* DesignSystem.swift */,
 				200000000000000000000005 /* RootView.swift */,
 				200000000000000000000009 /* MarketData.json */,
-				20000000000000000000000A /* Authentication.swift */,
-				20000000000000000000000B /* LoginView.swift */,
+				20000000000000000000000B /* PrivacyView.swift */,
 				20000000000000000000000C /* HuJu.entitlements */,
 				20000000000000000000000D /* Assets.xcassets */,
 				20000000000000000000000E /* PrivacyInfo.xcprivacy */,
@@ -215,8 +212,7 @@
 				100000000000000000000003 /* PropertyStore.swift in Sources */,
 				100000000000000000000004 /* DesignSystem.swift in Sources */,
 				100000000000000000000005 /* RootView.swift in Sources */,
-				10000000000000000000000A /* Authentication.swift in Sources */,
-				10000000000000000000000B /* LoginView.swift in Sources */,
+				10000000000000000000000B /* PrivacyView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,7 +252,6 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "用于在看房现场拍摄照片和视频。";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用于录制看房现场视频的声音。";
-				INFOPLIST_KEY_HUJUWeChatAuthorizationURL = "";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;

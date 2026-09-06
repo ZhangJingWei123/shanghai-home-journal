@@ -37,19 +37,15 @@ xcodebuild \
 xcrun simctl uninstall "$DEVICE_ID" "$BUNDLE_ID" 2>/dev/null || true
 xcrun simctl install "$DEVICE_ID" "$APP_PATH"
 
-xcrun simctl launch --terminate-running-process "$DEVICE_ID" "$BUNDLE_ID" -showLogin
-sleep 3
-xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACTS/login.png"
-
-xcrun simctl launch --terminate-running-process "$DEVICE_ID" "$BUNDLE_ID" -uiTestAuthenticated -loadSampleData
+xcrun simctl launch --terminate-running-process "$DEVICE_ID" "$BUNDLE_ID" -loadSampleData
 sleep 3
 xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACTS/home.png"
 
-xcrun simctl launch --terminate-running-process "$DEVICE_ID" "$BUNDLE_ID" -uiTestAuthenticated -loadSampleData -showMap
+xcrun simctl launch --terminate-running-process "$DEVICE_ID" "$BUNDLE_ID" -loadSampleData -showMap
 sleep 5
 xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACTS/map.png"
 
-xcrun simctl launch --terminate-running-process "$DEVICE_ID" "$BUNDLE_ID" -uiTestAuthenticated -loadSampleData -showAI
+xcrun simctl launch --terminate-running-process "$DEVICE_ID" "$BUNDLE_ID" -loadSampleData -showAI
 sleep 3
 xcrun simctl io "$DEVICE_ID" screenshot "$ARTIFACTS/ai.png"
 

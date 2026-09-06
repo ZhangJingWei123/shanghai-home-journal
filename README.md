@@ -14,7 +14,7 @@
 ## 当前原型
 
 - 全国与单城市看房范围切换，地图按候选、复看、已看和排除显示状态。
-- 支持通过苹果账号登录，并预留微信开放平台服务端授权流程。
+- 无需注册或登录，安装后直接使用全部功能。
 - 结构化看房日志，记录城市、行政区、总价、面积、通勤、风险和现场判断。
 - 房源时间线记录首次发现、调价、来源、复看、下架和成交变化。
 - 新增房源后自动生成有事实依据的优点、短板与待核验项。
@@ -68,21 +68,18 @@ xcodebuild \
 python3 scripts/update_market_data.py --start-year 2024 --end-year 2026
 ```
 
-## 登录配置
+## 隐私与数据
 
-全部本地功能无需注册或登录。首次启动直接进入空工作区，用户可以主动载入带有明确
+全部功能无需注册或登录。首次启动直接进入空工作区，用户可以主动载入带有明确
 标识的演示数据。
 
-苹果登录是可选功能，使用系统授权组件并声明对应能力。登录标识仅保存在本机钥匙串，
-不会创建开发者服务器账号或上传看房数据。
-
-微信登录客户端原型保留在代码中，但 1.0 版本不展示该入口。待开放平台、服务端换票、
-账号删除和隐私披露完整上线后再启用。
+预算、房源、看房笔记、评分、照片和视频默认只保存在本机应用容器中，不创建开发者
+服务器账号，也不上传看房数据。可以在“个人与隐私”页面一键清除本机全部数据。
 
 ## App Store 发布
 
 发布前需在 Xcode 的 `Settings > Accounts` 中登录开发者账号，并确认 App ID
-`com.zhangjingwei.huju` 已启用 Sign in with Apple。
+`com.zhangjingwei.huju` 的签名证书与描述文件可用。
 
 ```bash
 # 检查发行证书与工程配置
@@ -95,8 +92,8 @@ python3 scripts/update_market_data.py --start-year 2024 --end-year 2026
 ./scripts/release_ios.sh upload
 ```
 
-脚本会校验发行签名、Bundle ID、嵌入的 provisioning profile 和 Sign in with Apple
-entitlement。归档、IPA 和过程日志保存在忽略提交的 `artifacts/` 目录。
+脚本会校验发行签名、Bundle ID 和嵌入的 provisioning profile。归档、IPA 和过程
+日志保存在忽略提交的 `artifacts/` 目录。
 
 ## Skills
 
