@@ -252,7 +252,7 @@ final class AuthenticationStore: NSObject, ObservableObject {
                 .joined()
             let user = AuthenticatedUser(
                 id: credential.user,
-                displayName: providedName.isEmpty ? "沪居用户" : providedName,
+                displayName: providedName.isEmpty ? "选个家用户" : providedName,
                 provider: .apple
             )
             finish(with: user)

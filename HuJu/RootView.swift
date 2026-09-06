@@ -288,7 +288,7 @@ private struct HomeView: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("沪居")
+                    Text("选个家")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(HuJuTheme.green)
                     Text("你好，\(authentication.currentUser?.displayName ?? "看房人")")

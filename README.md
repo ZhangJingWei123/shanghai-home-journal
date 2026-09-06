@@ -1,14 +1,14 @@
-# 沪居 HuJu
+# 选个家
 
-沪居是一款面向全国购房者的 iOS 看房决策日志。它不复制房源平台，
+选个家是一款面向全国购房者的 iOS 看房决策日志。它不复制房源平台，
 而是把跨城市房源、预算、板块调研、现场证据、AI 复盘和购房流程放进同一个私人工作台。
 
 ## 界面
 
 <p>
-  <img src="docs/screenshots/home.png" width="30%" alt="沪居首页">
+  <img src="docs/screenshots/home.png" width="30%" alt="选个家首页">
   <img src="docs/screenshots/map.png" width="30%" alt="全国看房足迹地图">
-  <img src="docs/screenshots/ai.png" width="30%" alt="沪居判断页">
+  <img src="docs/screenshots/ai.png" width="30%" alt="选个家判断页">
 </p>
 
 ## 当前原型

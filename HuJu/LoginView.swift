@@ -90,7 +90,7 @@ struct LoginView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("沪居")
+                Text("选个家")
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(HuJuTheme.ink)
                 Text("无论在哪座城市，把每次看房整理成自己的答案。")
@@ -181,7 +181,7 @@ private enum LegalDocument: String, Identifiable {
             [
                 (
                     "使用范围",
-                    "沪居用于整理个人看房记录与购房决策证据，不提供官方估价、贷款、税务、产权或学区结论。"
+                    "选个家用于整理个人看房记录与购房决策证据，不提供官方估价、贷款、税务、产权或学区结论。"
                 ),
                 (
                     "信息核验",
@@ -204,7 +204,7 @@ private enum LegalDocument: String, Identifiable {
                 ),
                 (
                     "登录信息",
-                    "沪居只保存稳定用户标识、显示名称和登录方式；登录状态存放在系统钥匙串中。"
+                    "选个家只保存稳定用户标识、显示名称和登录方式；登录状态存放在系统钥匙串中。"
                 ),
                 (
                     "第三方服务",
