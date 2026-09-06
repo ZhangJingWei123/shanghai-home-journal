@@ -93,7 +93,6 @@ final class HuJuTests: XCTestCase {
 
         XCTAssertTrue(store.listings.isEmpty)
         XCTAssertTrue(store.partnerScores.isEmpty)
-        XCTAssertTrue(store.completedBuyingPlanTaskIDs.isEmpty)
     }
 
     @MainActor
@@ -191,7 +190,6 @@ final class HuJuTests: XCTestCase {
         let store = PropertyStore(defaults: defaults, loadsSampleData: true)
         let listingID = store.listings[0].id
         store.setPartnerScore(9, for: listingID)
-        store.toggleBuyingPlanTask("sample-task")
         store.selectCity("北京市")
         store.budget.totalBudget = 900
 
@@ -199,7 +197,6 @@ final class HuJuTests: XCTestCase {
 
         XCTAssertTrue(store.listings.isEmpty)
         XCTAssertTrue(store.partnerScores.isEmpty)
-        XCTAssertTrue(store.completedBuyingPlanTaskIDs.isEmpty)
         XCTAssertFalse(store.isUsingSampleData)
         XCTAssertNil(store.selectedCity)
         XCTAssertEqual(store.budget, BudgetProfile())
@@ -615,46 +612,6 @@ final class HuJuTests: XCTestCase {
         XCTAssertEqual(result.difference, 4)
         XCTAssertEqual(result.title, "核心判断不同")
         XCTAssertTrue(result.needsDiscussion)
-    }
-
-    @MainActor
-    func testBuyingPlanUsesBudgetListingsAndEvidenceToFindCurrentStage() {
-        let progress = BuyingPlanEngine.progress(
-            listings: Array(PropertyStore.samples.prefix(3)),
-            profile: BudgetProfile(
-                totalBudget: 500,
-                availableCash: 500,
-                monthlyIncome: 20,
-                loanYears: 30,
-                annualRate: 3.05,
-                isFirstHome: true,
-                maxCommuteMinutes: 45
-            ),
-            completedManualTaskIDs: [
-                "purchase-qualification",
-                "financing-precheck"
-            ]
-        )
-
-        XCTAssertTrue(progress.tasks.first { $0.id == "budget-boundary" }?.isComplete == true)
-        XCTAssertTrue(progress.tasks.first { $0.id == "area-shortlist" }?.isComplete == true)
-        XCTAssertEqual(progress.currentStage, .viewing)
-        XCTAssertEqual(progress.nextTasks.first?.id, "evidence-coverage")
-    }
-
-    @MainActor
-    func testBuyingPlanManualTasksPersistLocally() {
-        let suiteName = "HuJuBuyingPlanTests.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            return XCTFail("Unable to create isolated UserDefaults suite")
-        }
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let store = PropertyStore(defaults: defaults)
-        store.toggleBuyingPlanTask("purchase-qualification")
-
-        let restored = PropertyStore(defaults: defaults)
-        XCTAssertTrue(restored.completedBuyingPlanTaskIDs.contains("purchase-qualification"))
     }
 
     @MainActor

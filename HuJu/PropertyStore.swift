@@ -4,7 +4,6 @@ import Foundation
 final class PropertyStore: ObservableObject {
     @Published private(set) var listings: [PropertyListing]
     @Published private(set) var partnerScores: [UUID: Int]
-    @Published private(set) var completedBuyingPlanTaskIDs: Set<String>
     @Published private(set) var isUsingSampleData: Bool
     @Published private(set) var selectedCity: String?
     @Published var budget: BudgetProfile {
@@ -26,20 +25,11 @@ final class PropertyStore: ObservableObject {
         selectedCity ?? "全国"
     }
 
-    func toggleBuyingPlanTask(_ id: String) {
-        if completedBuyingPlanTaskIDs.contains(id) {
-            completedBuyingPlanTaskIDs.remove(id)
-        } else {
-            completedBuyingPlanTaskIDs.insert(id)
-        }
-        persist()
-    }
-
     private let defaults: UserDefaults?
     private let listingsKey = "huju.listings.v1"
     private let budgetKey = "huju.budget.v1"
     private let partnerScoresKey = "huju.partner-scores.v1"
-    private let buyingPlanKey = "huju.buying-plan.v1"
+    private let retiredTaskStateKey = "huju.buying-plan.v1"
     private let sampleDataKey = "huju.uses-sample-data.v1"
     private let selectedCityKey = "huju.selected-city.v1"
 
@@ -74,15 +64,6 @@ final class PropertyStore: ObservableObject {
             partnerScores = stored
         } else {
             partnerScores = [:]
-        }
-
-        if
-            let data = defaults?.data(forKey: buyingPlanKey),
-            let stored = try? JSONDecoder().decode(Set<String>.self, from: data)
-        {
-            completedBuyingPlanTaskIDs = stored
-        } else {
-            completedBuyingPlanTaskIDs = []
         }
 
         if
@@ -130,13 +111,19 @@ final class PropertyStore: ObservableObject {
 
         listings = []
         partnerScores = [:]
-        completedBuyingPlanTaskIDs = []
         isUsingSampleData = false
         selectedCity = nil
         budget = BudgetProfile()
 
         guard let defaults else { return }
-        [listingsKey, budgetKey, partnerScoresKey, buyingPlanKey, sampleDataKey, selectedCityKey]
+        [
+            listingsKey,
+            budgetKey,
+            partnerScoresKey,
+            retiredTaskStateKey,
+            sampleDataKey,
+            selectedCityKey
+        ]
             .forEach(defaults.removeObject(forKey:))
     }
 
@@ -281,9 +268,6 @@ final class PropertyStore: ObservableObject {
         }
         if let data = try? JSONEncoder().encode(partnerScores) {
             defaults.set(data, forKey: partnerScoresKey)
-        }
-        if let data = try? JSONEncoder().encode(completedBuyingPlanTaskIDs) {
-            defaults.set(data, forKey: buyingPlanKey)
         }
         defaults.set(isUsingSampleData, forKey: sampleDataKey)
     }

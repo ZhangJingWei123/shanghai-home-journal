@@ -21,7 +21,7 @@ The primary user loop is:
 3. Record structured evidence during every viewing.
 4. Compare properties using observed facts and explicit preferences.
 5. Close evidence gaps before adding more candidates.
-6. Track due diligence and transaction milestones.
+6. Archive the reasons for choosing or rejecting final candidates.
 
 Read `docs/market-analysis.md` before changing positioning or feature scope.
 
@@ -80,5 +80,5 @@ content, illegible text, and broken safe-area behavior.
 - Budget and ranking logic have assertions.
 - Policy claims include a date and authoritative source.
 - AI output exposes reasons and missing checks.
-- Map, journal, and plan remain functional.
+- Map, journal, and market analysis remain functional.
 - README screenshots and scope notes are updated for major UI changes.

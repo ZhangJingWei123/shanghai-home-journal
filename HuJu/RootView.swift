@@ -135,7 +135,7 @@ struct RootView: View {
                 .tabItem { Label("判断", systemImage: "checkmark.seal.fill") }
                 .tag(AppTab.ai)
 
-            BuyingPlanView()
+            MarketView()
                 .tabItem { Label("市场", systemImage: "chart.line.uptrend.xyaxis") }
                 .tag(AppTab.radar)
         }
@@ -2398,7 +2398,7 @@ private struct CoupleReviewView: View {
     }
 }
 
-private struct BuyingPlanView: View {
+private struct MarketView: View {
     @EnvironmentObject private var store: PropertyStore
     @State private var showBudgetEditor = false
     @State private var selectedMarket = HousingMarketKind.newHome
@@ -2408,14 +2408,6 @@ private struct BuyingPlanView: View {
     @State private var selectedMarketCity = "上海"
 
     private let marketData = MarketDataLoader.bundled
-
-    private var buyingProgress: BuyingPlanProgress {
-        BuyingPlanEngine.progress(
-            listings: store.visibleListings,
-            profile: store.budget,
-            completedManualTaskIDs: store.completedBuyingPlanTaskIDs
-        )
-    }
 
     private var snapshot: BudgetSnapshot {
         BudgetEngine.snapshot(for: store.budget)
@@ -2463,32 +2455,23 @@ private struct BuyingPlanView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 22) {
-                        marketPanel
-                        budgetPanel
-                        buyingPlanSummary
-                            .id("buying-plan")
-                        policyNotice
-                    }
-                    .padding(16)
+            ScrollView {
+                VStack(spacing: 22) {
+                    marketPanel
+                    budgetPanel
+                    policyNotice
                 }
-                .background(HuJuTheme.paper)
-                .onAppear {
-                    synchronizeMarketCity()
-                    if ProcessInfo.processInfo.arguments.contains("-showPlan") {
-                        DispatchQueue.main.async {
-                            proxy.scrollTo("buying-plan", anchor: .top)
-                        }
-                    }
-                }
-                .onChange(of: store.selectedCity) {
-                    synchronizeMarketCity()
-                }
-                .onChange(of: selectedMarketCity) {
-                    normalizeSelectedYear()
-                }
+                .padding(16)
+            }
+            .background(HuJuTheme.paper)
+            .onAppear {
+                synchronizeMarketCity()
+            }
+            .onChange(of: store.selectedCity) {
+                synchronizeMarketCity()
+            }
+            .onChange(of: selectedMarketCity) {
+                normalizeSelectedYear()
             }
             .navigationTitle("市场")
             .navigationBarTitleDisplayMode(.inline)
@@ -2724,44 +2707,6 @@ private struct BuyingPlanView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var buyingPlanSummary: some View {
-        VStack(spacing: 12) {
-            SectionHeading(
-                eyebrow: "购房流程",
-                title: "当前购房进度",
-                action: "\(buyingProgress.completedCount)/\(buyingProgress.tasks.count)"
-            )
-
-            NavigationLink {
-                BuyingJourneyView()
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: buyingProgress.currentStage.symbol)
-                        .font(.title3)
-                        .foregroundStyle(HuJuTheme.blue)
-                        .frame(width: 42, height: 42)
-                        .background(HuJuTheme.surfaceMuted)
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("当前处于\(buyingProgress.currentStage.title)阶段")
-                            .font(.headline)
-                            .foregroundStyle(HuJuTheme.ink)
-                        Text(buyingProgress.currentStage.guidance)
-                            .font(.caption)
-                            .foregroundStyle(HuJuTheme.muted)
-                            .multilineTextAlignment(.leading)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(HuJuTheme.muted)
-                }
-                .padding(13)
-                .hujuCard()
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
     private var policyNotice: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
@@ -2814,145 +2759,6 @@ private struct BuyingPlanView: View {
 
     private func percent(_ value: Double) -> String {
         String(format: "%+.1f%%", value)
-    }
-}
-
-private struct BuyingPlanTaskRow: View {
-    let task: BuyingPlanTask
-    var showsStage = false
-    let onToggle: () -> Void
-
-    var body: some View {
-        Group {
-            if task.kind == .manual {
-                Button(action: onToggle) {
-                    content
-                }
-                .buttonStyle(.plain)
-            } else {
-                content
-            }
-        }
-        .padding(13)
-        .hujuCard()
-    }
-
-    private var content: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: symbol)
-                .font(.title3)
-                .foregroundStyle(iconColor)
-                .frame(width: 24, height: 24)
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(task.title)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(HuJuTheme.ink)
-                    if showsStage {
-                        Text(task.stage.title)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(HuJuTheme.blue)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(HuJuTheme.blue.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                }
-                Text(task.detail)
-                    .font(.caption)
-                    .foregroundStyle(HuJuTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(statusText)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(task.isComplete ? HuJuTheme.green : HuJuTheme.blue)
-            }
-            Spacer(minLength: 0)
-        }
-        .contentShape(Rectangle())
-    }
-
-    private var symbol: String {
-        if task.isComplete { return "checkmark.circle.fill" }
-        return task.kind == .automatic ? "bolt.circle.fill" : "circle"
-    }
-
-    private var iconColor: Color {
-        if task.isComplete { return HuJuTheme.green }
-        return task.kind == .automatic ? HuJuTheme.blue : HuJuTheme.muted
-    }
-
-    private var statusText: String {
-        if task.isComplete { return "已完成" }
-        return task.kind == .automatic ? "根据当前数据自动判断" : "点击确认完成"
-    }
-}
-
-private struct BuyingJourneyView: View {
-    @EnvironmentObject private var store: PropertyStore
-
-    private var progress: BuyingPlanProgress {
-        BuyingPlanEngine.progress(
-            listings: store.visibleListings,
-            profile: store.budget,
-            completedManualTaskIDs: store.completedBuyingPlanTaskIDs
-        )
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("当前处于\(progress.currentStage.title)阶段")
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(HuJuTheme.ink)
-                            Text(progress.currentStage.guidance)
-                                .font(.caption)
-                                .foregroundStyle(HuJuTheme.muted)
-                        }
-                        Spacer()
-                        Text("\(progress.completedCount)/\(progress.tasks.count)")
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(HuJuTheme.green)
-                    }
-                    ProgressView(value: progress.completionRatio)
-                        .tint(HuJuTheme.green)
-                }
-                .padding(16)
-                .hujuCard()
-
-                ForEach(BuyingJourneyStage.allCases) { stage in
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 10) {
-                            Image(systemName: progress.isComplete(stage) ? "checkmark.circle.fill" : stage.symbol)
-                                .foregroundStyle(progress.isComplete(stage) ? HuJuTheme.green : HuJuTheme.blue)
-                                .frame(width: 28)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(stage.title)
-                                    .font(.headline)
-                                    .foregroundStyle(HuJuTheme.ink)
-                                Text(stage.guidance)
-                                    .font(.caption2)
-                                    .foregroundStyle(HuJuTheme.muted)
-                            }
-                        }
-
-                        ForEach(progress.tasks(for: stage)) { task in
-                            BuyingPlanTaskRow(task: task) {
-                                store.toggleBuyingPlanTask(task.id)
-                            }
-                        }
-                    }
-                    .padding(14)
-                }
-            }
-            .padding(16)
-        }
-        .background(HuJuTheme.paper)
-        .navigationTitle("购房计划")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
