@@ -13,6 +13,11 @@
 		100000000000000000000004 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000004 /* DesignSystem.swift */; };
 		100000000000000000000005 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000005 /* RootView.swift */; };
 		100000000000000000000006 /* HuJuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000006 /* HuJuTests.swift */; };
+		100000000000000000000009 /* MarketData.json in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* MarketData.json */; };
+		10000000000000000000000A /* Authentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000A /* Authentication.swift */; };
+		10000000000000000000000B /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000B /* LoginView.swift */; };
+		10000000000000000000000C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* Assets.xcassets */; };
+		10000000000000000000000D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000E /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +39,12 @@
 		200000000000000000000006 /* HuJuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HuJuTests.swift; sourceTree = "<group>"; };
 		200000000000000000000007 /* HuJu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HuJu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		200000000000000000000008 /* HuJuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HuJuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000009 /* MarketData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MarketData.json; sourceTree = "<group>"; };
+		20000000000000000000000A /* Authentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Authentication.swift; sourceTree = "<group>"; };
+		20000000000000000000000B /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		20000000000000000000000C /* HuJu.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HuJu.entitlements; sourceTree = "<group>"; };
+		20000000000000000000000D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		20000000000000000000000E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +82,12 @@
 				200000000000000000000003 /* PropertyStore.swift */,
 				200000000000000000000004 /* DesignSystem.swift */,
 				200000000000000000000005 /* RootView.swift */,
+				200000000000000000000009 /* MarketData.json */,
+				20000000000000000000000A /* Authentication.swift */,
+				20000000000000000000000B /* LoginView.swift */,
+				20000000000000000000000C /* HuJu.entitlements */,
+				20000000000000000000000D /* Assets.xcassets */,
+				20000000000000000000000E /* PrivacyInfo.xcprivacy */,
 			);
 			path = HuJu;
 			sourceTree = "<group>";
@@ -151,10 +168,9 @@
 			};
 			buildConfigurationList = 900000000000000000000003 /* Build configuration list for PBXProject "HuJu" */;
 			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
 				Base,
 				zh-Hans,
 			);
@@ -174,6 +190,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				100000000000000000000009 /* MarketData.json in Resources */,
+				10000000000000000000000C /* Assets.xcassets in Resources */,
+				10000000000000000000000D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -196,6 +215,8 @@
 				100000000000000000000003 /* PropertyStore.swift in Sources */,
 				100000000000000000000004 /* DesignSystem.swift in Sources */,
 				100000000000000000000005 /* RootView.swift in Sources */,
+				10000000000000000000000A /* Authentication.swift in Sources */,
+				10000000000000000000000B /* LoginView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,13 +243,20 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = HuJu/HuJu.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = JAN597TBVS;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDevelopmentRegion = "zh-Hans";
 				INFOPLIST_KEY_CFBundleDisplayName = "沪居";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSCameraUsageDescription = "用于在看房现场拍摄照片和视频。";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用于录制看房现场视频的声音。";
+				INFOPLIST_KEY_HUJUWeChatAuthorizationURL = "";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -237,8 +265,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.HuJu;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zhangjingwei.huju;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -249,13 +277,20 @@
 		A00000000000000000000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = HuJu/HuJu.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JAN597TBVS;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDevelopmentRegion = "zh-Hans";
 				INFOPLIST_KEY_CFBundleDisplayName = "沪居";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "用于在看房现场拍摄照片和视频。";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "用于录制看房现场视频的声音。";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -265,8 +300,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.HuJu;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zhangjingwei.huju;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -279,6 +314,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = JAN597TBVS;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -286,7 +322,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.HuJuTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zhangjingwei.huju.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -299,6 +335,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = JAN597TBVS;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -306,7 +343,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.HuJuTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zhangjingwei.huju.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
