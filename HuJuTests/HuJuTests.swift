@@ -118,6 +118,29 @@ final class HuJuTests: XCTestCase {
     }
 
     @MainActor
+    func testPrepareAppleAuthorizationRequestsRequiredScopes_BitsUT() {
+        let suiteName = "HuJuAppleAuthorizationTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Unable to create isolated UserDefaults suite")
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = AuthenticationStore(
+            storage: UserDefaultsAuthSessionStore(defaults: defaults),
+            allowsSimulatorLogin: false
+        )
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+
+        store.prepareAppleAuthorization(request)
+
+        XCTAssertTrue(store.isWorking)
+        XCTAssertEqual(
+            Set(request.requestedScopes ?? []),
+            Set([ASAuthorization.Scope.fullName, .email])
+        )
+    }
+
+    @MainActor
     func testPropertyStore_sampleDataRequiresExplicitAction_BitsUT() {
         let suiteName = "HuJuSampleDataTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {

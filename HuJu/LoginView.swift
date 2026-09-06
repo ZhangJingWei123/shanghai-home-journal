@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 
 struct AppEntryView: View {
@@ -118,21 +119,15 @@ struct LoginView: View {
             }
             .disabled(authentication.isWorking)
 
-            Button {
-                authentication.signInWithApple()
-            } label: {
-                Label("通过苹果登录", systemImage: "apple.logo")
-                    .font(.headline)
-                    .foregroundStyle(HuJuTheme.ink)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(HuJuTheme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(HuJuTheme.line)
-                    }
+            SignInWithAppleButton(.signIn) { request in
+                authentication.prepareAppleAuthorization(request)
+            } onCompletion: { result in
+                authentication.completeAppleAuthorization(result)
             }
+            .signInWithAppleButtonStyle(.black)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             .disabled(authentication.isWorking)
 
             Text("无需账号，预算与看房记录默认只保存在本机")

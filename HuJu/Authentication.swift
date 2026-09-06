@@ -268,16 +268,21 @@ final class AuthenticationStore: NSObject, ObservableObject {
         isWorking = true
     }
 
-    func signInWithApple() {
+    func prepareAppleAuthorization(_ request: ASAuthorizationAppleIDRequest) {
         beginAppleAuthorization()
+        request.requestedScopes = [.fullName, .email]
+    }
+
+    func signInWithApple() {
         if allowsSimulatorLogin {
+            beginAppleAuthorization()
             finishWithSimulatorUser(provider: .apple)
             isWorking = false
             return
         }
 
         let request = ASAuthorizationAppleIDProvider().createRequest()
-        request.requestedScopes = [.fullName, .email]
+        prepareAppleAuthorization(request)
         let controller = ASAuthorizationController(authorizationRequests: [request])
         controller.delegate = self
         controller.presentationContextProvider = self
