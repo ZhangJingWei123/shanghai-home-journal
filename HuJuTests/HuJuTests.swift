@@ -192,6 +192,7 @@ final class HuJuTests: XCTestCase {
         let listingID = store.listings[0].id
         store.setPartnerScore(9, for: listingID)
         store.toggleBuyingPlanTask("sample-task")
+        store.selectCity("北京市")
         store.budget.totalBudget = 900
 
         store.deleteAllUserData()
@@ -200,11 +201,66 @@ final class HuJuTests: XCTestCase {
         XCTAssertTrue(store.partnerScores.isEmpty)
         XCTAssertTrue(store.completedBuyingPlanTaskIDs.isEmpty)
         XCTAssertFalse(store.isUsingSampleData)
+        XCTAssertNil(store.selectedCity)
         XCTAssertEqual(store.budget, BudgetProfile())
 
         let restored = PropertyStore(defaults: defaults)
         XCTAssertTrue(restored.listings.isEmpty)
+        XCTAssertNil(restored.selectedCity)
         XCTAssertEqual(restored.budget, BudgetProfile())
+    }
+
+    @MainActor
+    func testLegacyListingWithoutCityDecodesAsShanghai() throws {
+        var legacyListing = PropertyStore.samples[0]
+        legacyListing.city = nil
+
+        let data = try JSONEncoder().encode(legacyListing)
+        let decoded = try JSONDecoder().decode(PropertyListing.self, from: data)
+
+        XCTAssertNil(decoded.city)
+        XCTAssertEqual(decoded.resolvedCity, "上海")
+        XCTAssertTrue(decoded.locationSummary.hasPrefix("上海"))
+    }
+
+    @MainActor
+    func testPropertyStoreFiltersListingsByCityAndRestoresNationalScope() {
+        let store = PropertyStore(defaults: nil, loadsSampleData: true)
+
+        XCTAssertEqual(store.visibleListings.count, PropertyStore.samples.count)
+
+        store.selectCity("北京市")
+        XCTAssertEqual(store.selectedCity, "北京")
+        XCTAssertEqual(store.visibleListings.map(\.resolvedCity), ["北京"])
+
+        store.selectCity("上海")
+        XCTAssertEqual(store.visibleListings.count, 4)
+        XCTAssertTrue(store.visibleListings.allSatisfy { $0.resolvedCity == "上海" })
+
+        store.selectCity(nil)
+        XCTAssertEqual(store.visibleListings.count, PropertyStore.samples.count)
+    }
+
+    @MainActor
+    func testPropertyStorePersistsSelectedCityAndAppliesItToNewListing() {
+        let suiteName = "HuJuCitySelectionTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Unable to create isolated UserDefaults suite")
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = PropertyStore(defaults: defaults)
+        store.selectCity("广州市")
+        var listing = PropertyStore.samples[0]
+        listing.city = nil
+        store.add(listing)
+
+        XCTAssertEqual(store.listings.first?.resolvedCity, "广州")
+
+        let restored = PropertyStore(defaults: defaults)
+        XCTAssertEqual(restored.selectedCity, "广州")
+        XCTAssertEqual(restored.visibleListings.count, 1)
+        XCTAssertEqual(restored.visibleListings.first?.resolvedCity, "广州")
     }
 
     @MainActor
@@ -414,7 +470,9 @@ final class HuJuTests: XCTestCase {
 
     @MainActor
     func testArchivedPropertyIsNotRecommended() {
-        let archived = PropertyStore.samples.last!
+        guard let archived = PropertyStore.samples.first(where: { $0.status == .archived }) else {
+            return XCTFail("Sample data must contain an archived property")
+        }
 
         let result = LocalAIAdvisor().recommendations(
             listings: [archived],
@@ -510,12 +568,14 @@ final class HuJuTests: XCTestCase {
         )
     }
 
-    func testBundledMarketDataSupportsShanghaiHistoricalYears() {
+    func testBundledMarketDataSupportsSeventyCitiesAndHistoricalYears() {
         let dataset = MarketDataLoader.load()
 
-        XCTAssertEqual(dataset.cities.count, 1)
+        XCTAssertEqual(dataset.cities.count, 70)
         XCTAssertEqual(dataset.availableYears, [2026, 2025, 2024])
-        XCTAssertEqual(dataset.cityNames, ["上海"])
+        XCTAssertTrue(dataset.cityNames.contains("上海"))
+        XCTAssertTrue(dataset.cityNames.contains("北京"))
+        XCTAssertTrue(dataset.cityNames.contains("成都"))
 
         let shanghai2024 = dataset.snapshot(city: "上海", year: 2024)
         XCTAssertEqual(shanghai2024?.newHome.count, 12)
@@ -527,6 +587,11 @@ final class HuJuTests: XCTestCase {
             shanghai2026?.series(for: .resale, range: .threeMonths).map(\.month),
             [5, 6, 7]
         )
+
+        let beijing2026 = dataset.snapshot(city: "北京", year: 2026)
+        XCTAssertEqual(beijing2026?.newHome.count, 7)
+        XCTAssertEqual(beijing2026?.resale.count, 7)
+        XCTAssertEqual(beijing2026?.sourceName, "国家统计局 · 70 个大中城市住宅销售价格指数")
     }
 
     @MainActor

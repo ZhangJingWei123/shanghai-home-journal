@@ -80,7 +80,7 @@ struct LoginView: View {
                     .background(HuJuTheme.green)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 Spacer()
-                Text("上海")
+                Text("全国")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(HuJuTheme.green)
                     .padding(.horizontal, 10)
@@ -93,7 +93,7 @@ struct LoginView: View {
                 Text("沪居")
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(HuJuTheme.ink)
-                Text("把看过的房子，慢慢整理成自己的答案。")
+                Text("无论在哪座城市，把每次看房整理成自己的答案。")
                     .font(.subheadline)
                     .foregroundStyle(HuJuTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -188,6 +188,10 @@ private enum LegalDocument: String, Identifiable {
                     "房源、市场与政策信息可能发生变化。作出交易决定前，请通过政府部门、金融机构和专业服务人员核验。"
                 ),
                 (
+                    "系统地图",
+                    "保存房源时可能使用 Apple MapKit 解析地图坐标。地图结果仅用于记录与展示，不代表官方地址、产权边界或交易信息。"
+                ),
+                (
                     "本机与可选登录",
                     "无需注册即可使用全部本地功能。使用苹果账号登录不会把预算、地址或看房记录上传到开发者服务器。"
                 )
@@ -204,7 +208,7 @@ private enum LegalDocument: String, Identifiable {
                 ),
                 (
                     "第三方服务",
-                    "可选的苹果登录由系统处理。未获得你的明确授权前，沪居不会把地址、收入或看房笔记发送给远端服务。"
+                    "苹果登录和地图由 Apple 系统服务处理。保存房源时，城市、行政区、板块和小区名称可能由 MapKit 用于解析地图坐标；开发者不会收到这些查询，也不会把收入、笔记或现场附件发送给远端服务。"
                 )
             ]
         }

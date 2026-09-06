@@ -92,6 +92,7 @@ struct PropertyMediaAttachment: Identifiable, Codable, Hashable {
 struct PropertyListing: Identifiable, Codable, Hashable {
     let id: UUID
     var name: String
+    var city: String? = nil
     var district: String
     var area: String
     var latitude: Double
@@ -124,6 +125,11 @@ struct PropertyListing: Identifiable, Codable, Hashable {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
+    var resolvedCity: String {
+        let cleanCity = CityCatalog.normalized(city ?? "")
+        return cleanCity.isEmpty ? "上海" : cleanCity
+    }
+
     var resolvedUnitLabel: String {
         let cleanLabel = unitLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return cleanLabel.isEmpty
@@ -133,6 +139,7 @@ struct PropertyListing: Identifiable, Codable, Hashable {
 
     var locationSummary: String {
         let details = [
+            resolvedCity,
             district,
             area,
             building?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -143,6 +150,158 @@ struct PropertyListing: Identifiable, Codable, Hashable {
             return value
         }
         return details.joined(separator: " · ")
+    }
+}
+
+enum CityCatalog {
+    static let popularCities = [
+        "北京", "上海", "广州", "深圳", "杭州", "南京",
+        "苏州", "成都", "武汉", "重庆", "西安", "天津"
+    ]
+
+    private static let centers: [String: CLLocationCoordinate2D] = [
+        "北京": CLLocationCoordinate2D(latitude: 39.9042, longitude: 116.4074),
+        "上海": CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737),
+        "广州": CLLocationCoordinate2D(latitude: 23.1291, longitude: 113.2644),
+        "深圳": CLLocationCoordinate2D(latitude: 22.5431, longitude: 114.0579),
+        "杭州": CLLocationCoordinate2D(latitude: 30.2741, longitude: 120.1551),
+        "南京": CLLocationCoordinate2D(latitude: 32.0603, longitude: 118.7969),
+        "苏州": CLLocationCoordinate2D(latitude: 31.2989, longitude: 120.5853),
+        "成都": CLLocationCoordinate2D(latitude: 30.5728, longitude: 104.0668),
+        "武汉": CLLocationCoordinate2D(latitude: 30.5928, longitude: 114.3055),
+        "重庆": CLLocationCoordinate2D(latitude: 29.4316, longitude: 106.9123),
+        "西安": CLLocationCoordinate2D(latitude: 34.3416, longitude: 108.9398),
+        "天津": CLLocationCoordinate2D(latitude: 39.3434, longitude: 117.3616),
+        "长沙": CLLocationCoordinate2D(latitude: 28.2282, longitude: 112.9388),
+        "郑州": CLLocationCoordinate2D(latitude: 34.7466, longitude: 113.6254),
+        "青岛": CLLocationCoordinate2D(latitude: 36.0671, longitude: 120.3826),
+        "济南": CLLocationCoordinate2D(latitude: 36.6512, longitude: 117.1201),
+        "合肥": CLLocationCoordinate2D(latitude: 31.8206, longitude: 117.2272),
+        "厦门": CLLocationCoordinate2D(latitude: 24.4798, longitude: 118.0894),
+        "福州": CLLocationCoordinate2D(latitude: 26.0745, longitude: 119.2965),
+        "宁波": CLLocationCoordinate2D(latitude: 29.8683, longitude: 121.5440),
+        "无锡": CLLocationCoordinate2D(latitude: 31.4912, longitude: 120.3119),
+        "沈阳": CLLocationCoordinate2D(latitude: 41.8057, longitude: 123.4315),
+        "大连": CLLocationCoordinate2D(latitude: 38.9140, longitude: 121.6147),
+        "哈尔滨": CLLocationCoordinate2D(latitude: 45.8038, longitude: 126.5350),
+        "长春": CLLocationCoordinate2D(latitude: 43.8171, longitude: 125.3235),
+        "石家庄": CLLocationCoordinate2D(latitude: 38.0428, longitude: 114.5149),
+        "太原": CLLocationCoordinate2D(latitude: 37.8706, longitude: 112.5489),
+        "呼和浩特": CLLocationCoordinate2D(latitude: 40.8426, longitude: 111.7492),
+        "南昌": CLLocationCoordinate2D(latitude: 28.6820, longitude: 115.8579),
+        "昆明": CLLocationCoordinate2D(latitude: 25.0389, longitude: 102.7183),
+        "贵阳": CLLocationCoordinate2D(latitude: 26.6470, longitude: 106.6302),
+        "南宁": CLLocationCoordinate2D(latitude: 22.8170, longitude: 108.3665),
+        "海口": CLLocationCoordinate2D(latitude: 20.0440, longitude: 110.1999),
+        "兰州": CLLocationCoordinate2D(latitude: 36.0611, longitude: 103.8343),
+        "西宁": CLLocationCoordinate2D(latitude: 36.6171, longitude: 101.7782),
+        "银川": CLLocationCoordinate2D(latitude: 38.4872, longitude: 106.2309),
+        "乌鲁木齐": CLLocationCoordinate2D(latitude: 43.8256, longitude: 87.6168),
+        "唐山": CLLocationCoordinate2D(latitude: 39.6305, longitude: 118.1802),
+        "秦皇岛": CLLocationCoordinate2D(latitude: 39.9354, longitude: 119.5996),
+        "包头": CLLocationCoordinate2D(latitude: 40.6574, longitude: 109.8403),
+        "丹东": CLLocationCoordinate2D(latitude: 40.0008, longitude: 124.3547),
+        "锦州": CLLocationCoordinate2D(latitude: 41.0952, longitude: 121.1270),
+        "吉林": CLLocationCoordinate2D(latitude: 43.8378, longitude: 126.5496),
+        "牡丹江": CLLocationCoordinate2D(latitude: 44.5517, longitude: 129.6332),
+        "徐州": CLLocationCoordinate2D(latitude: 34.2044, longitude: 117.2858),
+        "扬州": CLLocationCoordinate2D(latitude: 32.3942, longitude: 119.4129),
+        "温州": CLLocationCoordinate2D(latitude: 27.9939, longitude: 120.6994),
+        "金华": CLLocationCoordinate2D(latitude: 29.0785, longitude: 119.6474),
+        "蚌埠": CLLocationCoordinate2D(latitude: 32.9163, longitude: 117.3893),
+        "安庆": CLLocationCoordinate2D(latitude: 30.5429, longitude: 117.0635),
+        "泉州": CLLocationCoordinate2D(latitude: 24.8741, longitude: 118.6757),
+        "九江": CLLocationCoordinate2D(latitude: 29.7051, longitude: 116.0019),
+        "赣州": CLLocationCoordinate2D(latitude: 25.8311, longitude: 114.9350),
+        "烟台": CLLocationCoordinate2D(latitude: 37.4638, longitude: 121.4479),
+        "济宁": CLLocationCoordinate2D(latitude: 35.4147, longitude: 116.5871),
+        "洛阳": CLLocationCoordinate2D(latitude: 34.6197, longitude: 112.4540),
+        "平顶山": CLLocationCoordinate2D(latitude: 33.7662, longitude: 113.1927),
+        "宜昌": CLLocationCoordinate2D(latitude: 30.6919, longitude: 111.2865),
+        "襄阳": CLLocationCoordinate2D(latitude: 32.0089, longitude: 112.1224),
+        "岳阳": CLLocationCoordinate2D(latitude: 29.3571, longitude: 113.1289),
+        "常德": CLLocationCoordinate2D(latitude: 29.0316, longitude: 111.6985),
+        "韶关": CLLocationCoordinate2D(latitude: 24.8104, longitude: 113.5972),
+        "湛江": CLLocationCoordinate2D(latitude: 21.2707, longitude: 110.3594),
+        "惠州": CLLocationCoordinate2D(latitude: 23.1115, longitude: 114.4168),
+        "桂林": CLLocationCoordinate2D(latitude: 25.2742, longitude: 110.2900),
+        "北海": CLLocationCoordinate2D(latitude: 21.4811, longitude: 109.1202),
+        "三亚": CLLocationCoordinate2D(latitude: 18.2528, longitude: 109.5119),
+        "泸州": CLLocationCoordinate2D(latitude: 28.8717, longitude: 105.4423),
+        "南充": CLLocationCoordinate2D(latitude: 30.8373, longitude: 106.1107),
+        "遵义": CLLocationCoordinate2D(latitude: 27.7257, longitude: 106.9274),
+        "大理": CLLocationCoordinate2D(latitude: 25.6065, longitude: 100.2676)
+    ]
+
+    static func normalized(_ city: String) -> String {
+        let cleanCity = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanCity.count > 2, cleanCity.hasSuffix("市") else {
+            return cleanCity
+        }
+        return String(cleanCity.dropLast())
+    }
+
+    static func ordered(_ cities: [String]) -> [String] {
+        let unique = Array(Set(cities))
+        return unique.sorted { first, second in
+            let firstRank = popularCities.firstIndex(of: first)
+            let secondRank = popularCities.firstIndex(of: second)
+            switch (firstRank, secondRank) {
+            case let (.some(left), .some(right)):
+                return left < right
+            case (.some, .none):
+                return true
+            case (.none, .some):
+                return false
+            case (.none, .none):
+                return first.localizedStandardCompare(second) == .orderedAscending
+            }
+        }
+    }
+
+    static func coordinate(for city: String?) -> CLLocationCoordinate2D {
+        guard let city, let coordinate = centers[normalized(city)] else {
+            return CLLocationCoordinate2D(latitude: 35.8617, longitude: 104.1954)
+        }
+        return coordinate
+    }
+
+    static func resolveCoordinate(
+        city: String,
+        district: String,
+        area: String,
+        name: String
+    ) async -> CLLocationCoordinate2D {
+        let cleanCity = normalized(city)
+        let fallback = coordinate(for: cleanCity)
+        let query = [cleanCity, district, area, name]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && $0 != "待补充" }
+            .joined(separator: " ")
+        guard !query.isEmpty else { return fallback }
+
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        if centers[cleanCity] != nil {
+            request.region = region(for: cleanCity)
+        }
+        guard
+            let response = try? await MKLocalSearch(request: request).start(),
+            let coordinate = response.mapItems.first?.placemark.coordinate
+        else {
+            return fallback
+        }
+        return coordinate
+    }
+
+    static func region(for city: String?) -> MKCoordinateRegion {
+        MKCoordinateRegion(
+            center: coordinate(for: city),
+            span: MKCoordinateSpan(
+                latitudeDelta: city == nil ? 30 : 0.45,
+                longitudeDelta: city == nil ? 40 : 0.60
+            )
+        )
     }
 }
 
@@ -410,11 +569,7 @@ struct NationalMarketDataset: Codable, Equatable {
     let sources: [NationalMarketSource]
 
     var cityNames: [String] {
-        cities.map(\.name).sorted {
-            if $0 == "上海" { return $1 != "上海" }
-            if $1 == "上海" { return false }
-            return $0.localizedStandardCompare($1) == .orderedAscending
-        }
+        CityCatalog.ordered(cities.map(\.name))
     }
 
     var availableYears: [Int] {
@@ -467,7 +622,7 @@ struct NationalMarketDataset: Codable, Equatable {
 
     static let fallback = NationalMarketDataset(
         generatedAt: "2026-08-23",
-        sourceName: MarketRadarSnapshot.shanghai.sourceName,
+        sourceName: "国家统计局 · 70 个大中城市住宅销售价格指数",
         cities: [
             NationalMarketCity(
                 name: "上海",
@@ -506,6 +661,8 @@ struct NationalMarketDataset: Codable, Equatable {
 private final class MarketDataBundleToken {}
 
 enum MarketDataLoader {
+    static let bundled = load()
+
     static func load(bundle: Bundle = .main) -> NationalMarketDataset {
         let bundles = [bundle, Bundle(for: MarketDataBundleToken.self)]
         for candidate in bundles {
@@ -1316,7 +1473,7 @@ struct LocalAIAdvisor: AIAdvising {
         let snapshot = BudgetEngine.snapshot(for: profile)
         let averageCommute = listings.map(\.commuteMinutes).reduce(0, +) / listings.count
         let commonDistrict = Dictionary(grouping: listings, by: \.district)
-            .max(by: { $0.value.count < $1.value.count })?.key ?? "上海"
+            .max(by: { $0.value.count < $1.value.count })?.key ?? "当前城市"
 
         var result = [
             AIInsight(

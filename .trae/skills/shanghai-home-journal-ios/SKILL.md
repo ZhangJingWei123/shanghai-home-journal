@@ -1,6 +1,6 @@
 ---
 name: "shanghai-home-journal-ios"
-description: "Builds and reviews the HuJu Shanghai home-buying journal. Invoke for product, SwiftUI, MapKit, budget, AI-adviser, or buying-workflow changes in this repository."
+description: "Builds and reviews the HuJu nationwide home-buying journal. Invoke for product, SwiftUI, MapKit, budget, AI-adviser, or buying-workflow changes in this repository."
 ---
 
 # HuJu iOS Product Skill
@@ -10,14 +10,14 @@ Also load the installed `ios-swift` skill before editing Swift code.
 
 ## Product Contract
 
-HuJu is a private decision workspace for first-time Shanghai buyers. It is not a
+HuJu is a private decision workspace for home buyers across China. It is not a
 listing marketplace and must not claim to provide official valuation, legal,
 school-admission, lending, or tax advice.
 
 The primary user loop is:
 
 1. Define budget, cash, commute anchors, and non-negotiables.
-2. Research no more than three districts or submarkets at a time.
+2. Select a city and research no more than three districts or submarkets at a time.
 3. Record structured evidence during every viewing.
 4. Compare properties using observed facts and explicit preferences.
 5. Close evidence gaps before adding more candidates.

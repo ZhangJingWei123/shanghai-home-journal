@@ -6,8 +6,24 @@ final class PropertyStore: ObservableObject {
     @Published private(set) var partnerScores: [UUID: Int]
     @Published private(set) var completedBuyingPlanTaskIDs: Set<String>
     @Published private(set) var isUsingSampleData: Bool
+    @Published private(set) var selectedCity: String?
     @Published var budget: BudgetProfile {
         didSet { persist() }
+    }
+
+    var visibleListings: [PropertyListing] {
+        guard let selectedCity else { return listings }
+        return listings.filter { $0.resolvedCity == selectedCity }
+    }
+
+    var cityOptions: [String] {
+        CityCatalog.ordered(
+            MarketDataLoader.bundled.cityNames + listings.map(\.resolvedCity)
+        )
+    }
+
+    var cityScopeTitle: String {
+        selectedCity ?? "全国"
     }
 
     func toggleBuyingPlanTask(_ id: String) {
@@ -25,9 +41,11 @@ final class PropertyStore: ObservableObject {
     private let partnerScoresKey = "huju.partner-scores.v1"
     private let buyingPlanKey = "huju.buying-plan.v1"
     private let sampleDataKey = "huju.uses-sample-data.v1"
+    private let selectedCityKey = "huju.selected-city.v1"
 
     init(defaults: UserDefaults? = .standard, loadsSampleData: Bool = false) {
         self.defaults = defaults
+        selectedCity = defaults?.string(forKey: selectedCityKey).map(CityCatalog.normalized)
 
         if
             let data = defaults?.data(forKey: listingsKey),
@@ -37,7 +55,9 @@ final class PropertyStore: ObservableObject {
             if defaults?.object(forKey: sampleDataKey) != nil {
                 isUsingSampleData = defaults?.bool(forKey: sampleDataKey) ?? false
             } else {
-                isUsingSampleData = Set(stored.map(\.id)) == Set(Self.samples.map(\.id))
+                let storedIDs = Set(stored.map(\.id))
+                isUsingSampleData = !storedIDs.isEmpty
+                    && storedIDs.isSubset(of: Set(Self.samples.map(\.id)))
             }
         } else if loadsSampleData {
             listings = Self.samples
@@ -77,12 +97,24 @@ final class PropertyStore: ObservableObject {
 
     func add(_ listing: PropertyListing) {
         var listing = listing
+        let cleanCity = CityCatalog.normalized(listing.city ?? "")
+        if cleanCity.isEmpty {
+            listing.city = selectedCity
+        } else {
+            listing.city = cleanCity
+        }
         listing.availability = listing.availability ?? .active
         if listing.timeline?.isEmpty != false {
             listing.timeline = [PropertyTimelineEngine.discoveryEvent(for: listing)]
         }
         listings.insert(listing, at: 0)
         persist()
+    }
+
+    func selectCity(_ city: String?) {
+        let cleanCity = CityCatalog.normalized(city ?? "")
+        selectedCity = cleanCity.isEmpty ? nil : cleanCity
+        persistSelectedCity()
     }
 
     func loadSampleData() {
@@ -100,15 +132,19 @@ final class PropertyStore: ObservableObject {
         partnerScores = [:]
         completedBuyingPlanTaskIDs = []
         isUsingSampleData = false
+        selectedCity = nil
         budget = BudgetProfile()
 
         guard let defaults else { return }
-        [listingsKey, budgetKey, partnerScoresKey, buyingPlanKey, sampleDataKey]
+        [listingsKey, budgetKey, partnerScoresKey, buyingPlanKey, sampleDataKey, selectedCityKey]
             .forEach(defaults.removeObject(forKey:))
     }
 
     func update(_ listing: PropertyListing) {
         guard let index = listings.firstIndex(where: { $0.id == listing.id }) else { return }
+        var listing = listing
+        let cleanCity = CityCatalog.normalized(listing.city ?? "")
+        listing.city = cleanCity.isEmpty ? nil : cleanCity
         listings[index] = listing
         persist()
     }
@@ -252,10 +288,20 @@ final class PropertyStore: ObservableObject {
         defaults.set(isUsingSampleData, forKey: sampleDataKey)
     }
 
+    private func persistSelectedCity() {
+        guard let defaults else { return }
+        if let selectedCity {
+            defaults.set(selectedCity, forKey: selectedCityKey)
+        } else {
+            defaults.removeObject(forKey: selectedCityKey)
+        }
+    }
+
     static let samples: [PropertyListing] = [
         PropertyListing(
             id: UUID(uuidString: "6A1038EF-0905-47DD-9827-E29578C2A90A")!,
             name: "万科翡翠公园",
+            city: "上海",
             district: "浦东新区",
             area: "张江",
             latitude: 31.2038,
@@ -306,6 +352,7 @@ final class PropertyStore: ObservableObject {
         PropertyListing(
             id: UUID(uuidString: "AFAF315E-54A5-4C51-918D-A55BF902AB00")!,
             name: "大华锦绣华城",
+            city: "上海",
             district: "浦东新区",
             area: "北蔡",
             latitude: 31.1791,
@@ -329,6 +376,7 @@ final class PropertyStore: ObservableObject {
         PropertyListing(
             id: UUID(uuidString: "0D309EE1-FC91-4DA9-A3C0-7E47307E6798")!,
             name: "中海寰宇时代",
+            city: "上海",
             district: "闵行区",
             area: "华漕",
             latitude: 31.2167,
@@ -352,6 +400,7 @@ final class PropertyStore: ObservableObject {
         PropertyListing(
             id: UUID(uuidString: "B4BE2B1A-BA28-488F-91F3-D7F4A430B78A")!,
             name: "新江湾城时代花园",
+            city: "上海",
             district: "杨浦区",
             area: "新江湾城",
             latitude: 31.3266,
@@ -371,6 +420,78 @@ final class PropertyStore: ObservableObject {
             unitLabel: "两房",
             building: "9 号楼",
             floorDescription: "低楼层"
+        ),
+        PropertyListing(
+            id: UUID(uuidString: "CAFE0810-9AB7-4B70-A82A-F4E0D5AA38C1")!,
+            name: "望京示例房源",
+            city: "北京",
+            district: "朝阳区",
+            area: "望京",
+            latitude: 39.9961,
+            longitude: 116.4753,
+            totalPrice: 720,
+            unitPrice: 86_700,
+            size: 83,
+            rooms: "2室1厅",
+            visitDate: Calendar.current.date(byAdding: .day, value: -4, to: .now)!,
+            status: .shortlisted,
+            score: 8,
+            commuteMinutes: 35,
+            tags: ["近地铁", "生活便利"],
+            highlights: ["通勤时间可控", "周边生活配套成熟"],
+            concerns: ["总价接近上限", "夜间噪音待复核"],
+            note: "用于演示跨城市看房记录，具体信息不代表真实在售房源。",
+            unitLabel: "示例两房",
+            building: "5 号楼",
+            floorDescription: "中楼层"
+        ),
+        PropertyListing(
+            id: UUID(uuidString: "7FA2C962-B7B1-44CE-8B8C-5314D96D42D2")!,
+            name: "未来科技城示例房源",
+            city: "杭州",
+            district: "余杭区",
+            area: "未来科技城",
+            latitude: 30.2815,
+            longitude: 120.0188,
+            totalPrice: 420,
+            unitPrice: 46_700,
+            size: 90,
+            rooms: "3室2厅",
+            visitDate: Calendar.current.date(byAdding: .day, value: -9, to: .now)!,
+            status: .visited,
+            score: 8,
+            commuteMinutes: 42,
+            tags: ["三房", "次新"],
+            highlights: ["空间利用率较高", "预算留有余量"],
+            concerns: ["通勤换乘需要复核", "周边建设周期待确认"],
+            note: "用于演示不同城市的预算与通勤比较。",
+            unitLabel: "示例三房",
+            building: "8 号楼",
+            floorDescription: "高楼层"
+        ),
+        PropertyListing(
+            id: UUID(uuidString: "3772A09C-FA2D-4DA7-B353-5C2A98F70111")!,
+            name: "金融城示例房源",
+            city: "成都",
+            district: "武侯区",
+            area: "金融城",
+            latitude: 30.5755,
+            longitude: 104.0648,
+            totalPrice: 330,
+            unitPrice: 34_700,
+            size: 95,
+            rooms: "3室2厅",
+            visitDate: Calendar.current.date(byAdding: .day, value: -15, to: .now)!,
+            status: .revisit,
+            score: 9,
+            commuteMinutes: 28,
+            tags: ["通勤便利", "物业已问"],
+            highlights: ["家庭空间充足", "通勤与预算平衡"],
+            concerns: ["雨季渗水记录待核验"],
+            note: "用于演示全国城市间的看房记录与证据管理。",
+            unitLabel: "示例改善三房",
+            building: "2 号楼",
+            floorDescription: "中高楼层"
         )
     ]
 }

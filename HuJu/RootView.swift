@@ -12,6 +12,90 @@ private enum AppTab: Hashable {
     case radar
 }
 
+private struct CityScopeButton: View {
+    @EnvironmentObject private var store: PropertyStore
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            isPresented = true
+        } label: {
+            Label(store.cityScopeTitle, systemImage: "mappin.and.ellipse")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HuJuTheme.green)
+                .padding(.horizontal, 10)
+                .frame(minHeight: 36)
+                .background(HuJuTheme.green.opacity(0.09))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("选择看房城市，当前为\(store.cityScopeTitle)")
+        .sheet(isPresented: $isPresented) {
+            CitySelectionView()
+        }
+    }
+}
+
+private struct CitySelectionView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: PropertyStore
+    @State private var query = ""
+
+    private var visibleCities: [String] {
+        guard !query.isEmpty else { return store.cityOptions }
+        return store.cityOptions.filter {
+            $0.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Button {
+                    store.selectCity(nil)
+                    dismiss()
+                } label: {
+                    cityRow("全国", isSelected: store.selectedCity == nil)
+                }
+                .buttonStyle(.plain)
+
+                Section("城市") {
+                    ForEach(visibleCities, id: \.self) { city in
+                        Button {
+                            store.selectCity(city)
+                            dismiss()
+                        } label: {
+                            cityRow(city, isSelected: store.selectedCity == city)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .searchable(text: $query, prompt: "搜索城市")
+            .navigationTitle("看房城市")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func cityRow(_ city: String, isSelected: Bool) -> some View {
+        HStack {
+            Text(city)
+                .foregroundStyle(HuJuTheme.ink)
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .foregroundStyle(HuJuTheme.green)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+}
+
 struct RootView: View {
     @EnvironmentObject private var store: PropertyStore
     @State private var showAdd = false
@@ -58,7 +142,10 @@ struct RootView: View {
         .toolbarBackground(.thinMaterial, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .sheet(isPresented: $showAdd) {
-            AddPropertyView(profile: store.budget) { listing in
+            AddPropertyView(
+                profile: store.budget,
+                initialCity: store.selectedCity
+            ) { listing in
                 store.add(listing)
             }
         }
@@ -144,7 +231,7 @@ private struct HomeView: View {
     }
 
     private var activeListings: [PropertyListing] {
-        store.listings.filter { $0.status != .archived }
+        store.visibleListings.filter { $0.status != .archived }
     }
 
     private var viewingJourneyMessage: String {
@@ -175,7 +262,7 @@ private struct HomeView: View {
                     if store.isUsingSampleData {
                         sampleDataBanner
                     }
-                    if store.listings.isEmpty {
+                    if store.visibleListings.isEmpty {
                         emptyWorkspace
                         decisionStrip
                     } else {
@@ -236,6 +323,7 @@ private struct HomeView: View {
             }
 
             VStack(alignment: .leading, spacing: 7) {
+                CityScopeButton()
                 Text("今天的看房计划")
                     .font(.title.weight(.bold))
                     .foregroundStyle(HuJuTheme.ink)
@@ -306,16 +394,18 @@ private struct HomeView: View {
             .buttonStyle(.borderedProminent)
             .tint(HuJuTheme.green)
 
-            Button {
-                store.loadSampleData()
-            } label: {
-                Label("载入演示数据", systemImage: "testtube.2")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+            if store.listings.isEmpty {
+                Button {
+                    store.loadSampleData()
+                } label: {
+                    Label("载入全国演示数据", systemImage: "testtube.2")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                }
+                .buttonStyle(.bordered)
+                .tint(HuJuTheme.blue)
             }
-            .buttonStyle(.bordered)
-            .tint(HuJuTheme.blue)
         }
         .padding(18)
         .hujuCard()
@@ -385,10 +475,14 @@ private struct HomeView: View {
 
     private var recentSection: some View {
         VStack(spacing: 12) {
-            SectionHeading(eyebrow: "房源", title: "最近看过", action: "共 \(store.listings.count) 套")
+            SectionHeading(
+                eyebrow: store.cityScopeTitle,
+                title: "最近看过",
+                action: "共 \(store.visibleListings.count) 套"
+            )
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 12) {
-                    ForEach(store.listings.prefix(4)) { listing in
+                    ForEach(store.visibleListings.prefix(4)) { listing in
                         NavigationLink {
                             PropertyDetailView(listing: listing)
                         } label: {
@@ -578,21 +672,18 @@ private struct BudgetEditorView: View {
 private struct PropertyMapView: View {
     @EnvironmentObject private var store: PropertyStore
     @State private var position: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737),
-            span: MKCoordinateSpan(latitudeDelta: 0.34, longitudeDelta: 0.50)
-        )
+        CityCatalog.region(for: nil)
     )
     @State private var selectedID: UUID?
 
     private var selected: PropertyListing? {
-        store.listings.first { $0.id == selectedID }
+        store.visibleListings.first { $0.id == selectedID }
     }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Map(position: $position, selection: $selectedID) {
-                ForEach(store.listings) { listing in
+                ForEach(store.visibleListings) { listing in
                     Marker(
                         listing.name,
                         systemImage: listing.status == .archived ? "xmark" : "house.fill",
@@ -607,13 +698,9 @@ private struct PropertyMapView: View {
 
             VStack(spacing: 10) {
                 HStack {
-                    Image(systemName: "location.fill")
-                        .foregroundStyle(HuJuTheme.green)
-                    Text("上海 · 看房足迹")
-                        .font(.headline)
-                        .foregroundStyle(HuJuTheme.ink)
+                    CityScopeButton()
                     Spacer()
-                    Text("\(store.listings.count) 个位置")
+                    Text("\(store.visibleListings.count) 个位置")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(HuJuTheme.muted)
                 }
@@ -643,6 +730,22 @@ private struct PropertyMapView: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 12)
         }
+        .onAppear {
+            updateCamera()
+        }
+        .onChange(of: store.selectedCity) {
+            selectedID = nil
+            updateCamera()
+        }
+        .onChange(of: store.visibleListings.map(\.id)) {
+            updateCamera()
+        }
+    }
+
+    private func updateCamera() {
+        position = store.visibleListings.isEmpty
+            ? .region(CityCatalog.region(for: store.selectedCity))
+            : .automatic
     }
 
     private func markerColor(for status: PropertyStatus) -> Color {
@@ -664,7 +767,7 @@ private struct PropertyMapView: View {
                         .foregroundStyle(HuJuTheme.ink)
                     StatusBadge(status: listing.status)
                 }
-                Text("\(listing.district) · \(listing.area) · \(Int(listing.totalPrice)) 万")
+                Text("\(listing.locationSummary) · \(Int(listing.totalPrice)) 万")
                     .font(.caption)
                     .foregroundStyle(HuJuTheme.muted)
                 Text(listing.note)
@@ -689,14 +792,21 @@ private struct JournalView: View {
     @State private var showFieldMode = false
 
     private var visibleListings: [PropertyListing] {
-        guard let filter else { return store.listings }
-        return store.listings.filter { $0.status == filter }
+        guard let filter else { return store.visibleListings }
+        return store.visibleListings.filter { $0.status == filter }
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    HStack {
+                        CityScopeButton()
+                        Spacer()
+                        Text("\(visibleListings.count) 套")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(HuJuTheme.muted)
+                    }
                     filterBar
 
                     VStack(spacing: 0) {
@@ -1349,15 +1459,20 @@ private struct PropertyEditView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: PropertyListing
 
+    private let originalCity: String
     let onSave: (PropertyListing) -> Void
 
     init(listing: PropertyListing, onSave: @escaping (PropertyListing) -> Void) {
-        _draft = State(initialValue: listing)
+        var initialDraft = listing
+        initialDraft.city = listing.resolvedCity
+        _draft = State(initialValue: initialDraft)
+        originalCity = listing.resolvedCity
         self.onSave = onSave
     }
 
     private var canSave: Bool {
         !draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && draft.city?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
             && draft.totalPrice > 0
             && draft.size > 0
     }
@@ -1368,6 +1483,7 @@ private struct PropertyEditView: View {
                 Section("房源信息") {
                     TextField("楼盘或小区名", text: $draft.name)
                     TextField("房源标签", text: optionalText(\.unitLabel))
+                    TextField("城市", text: optionalText(\.city))
                     TextField("行政区", text: $draft.district)
                     TextField("板块", text: $draft.area)
                     TextField("楼栋", text: optionalText(\.building))
@@ -1421,6 +1537,14 @@ private struct PropertyEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         draft.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        draft.city = draft.city?.trimmingCharacters(in: .whitespacesAndNewlines)
+                        draft.district = draft.district.trimmingCharacters(in: .whitespacesAndNewlines)
+                        draft.area = draft.area.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if draft.resolvedCity != originalCity {
+                            let coordinate = CityCatalog.coordinate(for: draft.resolvedCity)
+                            draft.latitude = coordinate.latitude
+                            draft.longitude = coordinate.longitude
+                        }
                         draft.unitPrice = Int(draft.totalPrice * 10_000 / draft.size)
                         onSave(draft)
                         dismiss()
@@ -1529,7 +1653,7 @@ private struct PropertyTimelineView: View {
                     Text(listing.name)
                         .font(.title2.weight(.bold))
                         .foregroundStyle(HuJuTheme.ink)
-                    Text("\(listing.district) · \(listing.area)")
+                    Text(listing.locationSummary)
                         .font(.caption)
                         .foregroundStyle(HuJuTheme.muted)
                 }
@@ -1801,11 +1925,11 @@ private struct AIAdvisorView: View {
     private let advisor = LocalAIAdvisor()
 
     private var recommendations: [AIRecommendation] {
-        advisor.recommendations(listings: store.listings, profile: store.budget)
+        advisor.recommendations(listings: store.visibleListings, profile: store.budget)
     }
 
     private var insights: [AIInsight] {
-        advisor.insights(listings: store.listings, profile: store.budget)
+        advisor.insights(listings: store.visibleListings, profile: store.budget)
     }
 
     var body: some View {
@@ -1993,7 +2117,7 @@ private struct BlindComparisonView: View {
     @State private var choice: Choice?
 
     private var listings: [PropertyListing] {
-        store.listings.filter { $0.status != .archived }
+        store.visibleListings.filter { $0.status != .archived }
     }
 
     private var first: PropertyListing? {
@@ -2087,7 +2211,7 @@ private struct BlindComparisonView: View {
                     Text(selected.name)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(HuJuTheme.ink)
-                    Text("\(selected.district) · \(selected.area)")
+                    Text(selected.locationSummary)
                         .font(.subheadline)
                         .foregroundStyle(HuJuTheme.muted)
                 }
@@ -2164,7 +2288,7 @@ private struct CoupleReviewView: View {
     @State private var revealed = false
 
     private var listings: [PropertyListing] {
-        store.listings.filter { $0.status != .archived }
+        store.visibleListings.filter { $0.status != .archived }
     }
 
     private var selected: PropertyListing? {
@@ -2281,12 +2405,13 @@ private struct BuyingPlanView: View {
     @State private var selectedMetric = MarketMetric.monthOverMonth
     @State private var selectedRange = MarketTimeRange.sixMonths
     @State private var selectedYear = 2026
+    @State private var selectedMarketCity = "上海"
 
-    private let marketData = MarketDataLoader.load()
+    private let marketData = MarketDataLoader.bundled
 
     private var buyingProgress: BuyingPlanProgress {
         BuyingPlanEngine.progress(
-            listings: store.listings,
+            listings: store.visibleListings,
             profile: store.budget,
             completedManualTaskIDs: store.completedBuyingPlanTaskIDs
         )
@@ -2307,8 +2432,16 @@ private struct BuyingPlanView: View {
         market.series(for: selectedMarket, range: selectedRange)
     }
 
+    private var marketYears: [Int] {
+        guard let city = marketData.cities.first(where: { $0.name == selectedMarketCity }) else {
+            return marketData.availableYears
+        }
+        return Array(Set(city.records.map(\.year))).sorted(by: >)
+    }
+
     private var market: MarketRadarSnapshot {
-        marketData.snapshot(city: "上海", year: selectedYear)
+        marketData.snapshot(city: selectedMarketCity, year: selectedYear)
+            ?? marketData.snapshot(city: selectedMarketCity, year: marketYears.first ?? selectedYear)
             ?? MarketRadarSnapshot.shanghai
     }
 
@@ -2343,11 +2476,18 @@ private struct BuyingPlanView: View {
                 }
                 .background(HuJuTheme.paper)
                 .onAppear {
+                    synchronizeMarketCity()
                     if ProcessInfo.processInfo.arguments.contains("-showPlan") {
                         DispatchQueue.main.async {
                             proxy.scrollTo("buying-plan", anchor: .top)
                         }
                     }
+                }
+                .onChange(of: store.selectedCity) {
+                    synchronizeMarketCity()
+                }
+                .onChange(of: selectedMarketCity) {
+                    normalizeSelectedYear()
                 }
             }
             .navigationTitle("市场")
@@ -2364,20 +2504,29 @@ private struct BuyingPlanView: View {
         VStack(alignment: .leading, spacing: 16) {
             SectionHeading(
                 eyebrow: "国家统计局官方指数",
-                title: "上海房价指数",
+                title: "\(market.city)房价指数",
                 action: market.period
             )
 
             HStack(spacing: 10) {
-                Label("上海", systemImage: "building.2.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HuJuTheme.ink)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 44)
+                Menu {
+                    Picker("指数城市", selection: $selectedMarketCity) {
+                        ForEach(marketData.cityNames, id: \.self) { city in
+                            Text(city).tag(city)
+                        }
+                    }
+                } label: {
+                    Label(selectedMarketCity, systemImage: "building.2.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HuJuTheme.green)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: 44)
+                }
+                .accessibilityLabel("选择指数城市，当前为\(selectedMarketCity)")
 
                 Menu {
                     Picker("年份", selection: $selectedYear) {
-                        ForEach(marketData.availableYears, id: \.self) { year in
+                        ForEach(marketYears, id: \.self) { year in
                             Text(verbatim: "\(year) 年").tag(year)
                         }
                     }
@@ -2529,7 +2678,7 @@ private struct BuyingPlanView: View {
                         .font(.title3.monospacedDigit().weight(.bold))
                         .foregroundStyle(HuJuTheme.coral)
                 }
-                Slider(value: $store.budget.totalBudget, in: 300...1_200, step: 10)
+                Slider(value: $store.budget.totalBudget, in: 50...3_000, step: 10)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -2540,7 +2689,7 @@ private struct BuyingPlanView: View {
                     Text("\(Int(store.budget.availableCash)) 万")
                         .font(.headline.monospacedDigit())
                 }
-                Slider(value: $store.budget.availableCash, in: 80...600, step: 10)
+                Slider(value: $store.budget.availableCash, in: 10...1_500, step: 10)
             }
 
             Stepper(
@@ -2618,7 +2767,7 @@ private struct BuyingPlanView: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "info.circle.fill")
                     .foregroundStyle(HuJuTheme.blue)
-                Text("国家统计局数据是上海城市级价格指数，不代表具体板块均价或未来涨跌。政策、贷款、税费和学区信息请在交易前复核。")
+                Text("国家统计局数据是\(market.city)城市级价格指数，不代表具体板块均价或未来涨跌。各地政策、贷款、税费和学区信息请在交易前复核。")
                     .font(.caption)
                     .foregroundStyle(HuJuTheme.muted)
             }
@@ -2637,11 +2786,30 @@ private struct BuyingPlanView: View {
                 }
             }
 
-            Text("发布于 \(market.publishedAt) · 上海历史数据")
+            Text("发布于 \(market.publishedAt) · \(market.city)历史数据")
                 .font(.caption2)
                 .foregroundStyle(HuJuTheme.muted)
         }
         .padding(.bottom, 10)
+    }
+
+    private func synchronizeMarketCity() {
+        if
+            let selectedCity = store.selectedCity,
+            marketData.cityNames.contains(selectedCity)
+        {
+            selectedMarketCity = selectedCity
+        } else if !marketData.cityNames.contains(selectedMarketCity) {
+            selectedMarketCity = marketData.cityNames.first ?? "上海"
+        }
+        normalizeSelectedYear()
+    }
+
+    private func normalizeSelectedYear() {
+        guard !marketYears.contains(selectedYear), let latestYear = marketYears.first else {
+            return
+        }
+        selectedYear = latestYear
     }
 
     private func percent(_ value: Double) -> String {
@@ -2725,7 +2893,7 @@ private struct BuyingJourneyView: View {
 
     private var progress: BuyingPlanProgress {
         BuyingPlanEngine.progress(
-            listings: store.listings,
+            listings: store.visibleListings,
             profile: store.budget,
             completedManualTaskIDs: store.completedBuyingPlanTaskIDs
         )
@@ -2794,7 +2962,7 @@ private struct FieldVisitView: View {
     @State private var selectedID: UUID?
 
     private var listings: [PropertyListing] {
-        store.listings.filter { $0.status != .archived }
+        store.visibleListings.filter { $0.status != .archived }
     }
 
     private var selected: PropertyListing? {
@@ -2856,7 +3024,7 @@ private struct FieldVisitView: View {
                     Text(listing.name)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(HuJuTheme.ink)
-                    Text("\(listing.district) · \(listing.area)")
+                    Text(listing.locationSummary)
                         .font(.caption)
                         .foregroundStyle(HuJuTheme.muted)
                 }
@@ -2910,7 +3078,8 @@ private struct FieldVisitView: View {
 private struct AddPropertyView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var district = "浦东新区"
+    @State private var city: String
+    @State private var district = ""
     @State private var area = ""
     @State private var unitLabel = ""
     @State private var building = ""
@@ -2927,9 +3096,25 @@ private struct AddPropertyView: View {
     @State private var note = ""
     @State private var mediaAttachments: [PropertyMediaAttachment] = []
     @State private var savedListing: PropertyListing?
+    @State private var isSaving = false
 
     let profile: BudgetProfile
     let onSave: (PropertyListing) -> Void
+
+    init(
+        profile: BudgetProfile,
+        initialCity: String?,
+        onSave: @escaping (PropertyListing) -> Void
+    ) {
+        self.profile = profile
+        self.onSave = onSave
+        _city = State(initialValue: initialCity ?? "")
+    }
+
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         NavigationStack {
@@ -2951,8 +3136,16 @@ private struct AddPropertyView: View {
                         }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("保存并分析") { save() }
-                            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        Button {
+                            Task { await save() }
+                        } label: {
+                            if isSaving {
+                                ProgressView()
+                            } else {
+                                Text("保存并分析")
+                            }
+                        }
+                        .disabled(!canSave || isSaving)
                     }
                 } else {
                     ToolbarItem(placement: .confirmationAction) {
@@ -2967,11 +3160,20 @@ private struct AddPropertyView: View {
         Form {
             Section("楼盘位置") {
                 TextField("楼盘或小区名", text: $name)
-                Picker("行政区", selection: $district) {
-                    ForEach(["浦东新区", "闵行区", "徐汇区", "杨浦区", "宝山区", "嘉定区", "松江区"], id: \.self) {
-                        Text($0)
+                HStack {
+                    TextField("城市（必填）", text: $city)
+                    Menu {
+                        ForEach(MarketDataLoader.bundled.cityNames, id: \.self) { option in
+                            Button(option) {
+                                city = option
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "chevron.down.circle")
                     }
+                    .accessibilityLabel("从国家统计局城市列表选择")
                 }
+                TextField("行政区或县", text: $district)
                 TextField("板块", text: $area)
                 TextField("房源标签（例如 80 平南向两房）", text: $unitLabel)
                 TextField("房源原始链接（选填）", text: $sourceURL)
@@ -2981,7 +3183,7 @@ private struct AddPropertyView: View {
 
             Section("房源事实") {
                 LabeledContent("总价", value: "\(Int(totalPrice)) 万")
-                Slider(value: $totalPrice, in: 200...1_500, step: 10)
+                Slider(value: $totalPrice, in: 50...3_000, step: 10)
                 LabeledContent("面积", value: "\(Int(size)) 平方米")
                 Slider(value: $size, in: 30...200, step: 1)
                 Picker("户型", selection: $rooms) {
@@ -3029,7 +3231,7 @@ private struct AddPropertyView: View {
                     Text(listing.name)
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(HuJuTheme.ink)
-                    Text("\(listing.district) · \(listing.area)")
+                    Text(listing.locationSummary)
                         .font(.subheadline)
                         .foregroundStyle(HuJuTheme.muted)
                     HStack {
@@ -3062,14 +3264,32 @@ private struct AddPropertyView: View {
         .background(HuJuTheme.paper)
     }
 
-    private func save() {
+    private func save() async {
+        isSaving = true
+        defer { isSaving = false }
+
+        let cleanCity = CityCatalog.normalized(city)
+        let cleanDistrict = district.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanArea = area.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let coordinate = await CityCatalog.resolveCoordinate(
+            city: cleanCity,
+            district: cleanDistrict,
+            area: cleanArea,
+            name: cleanName
+        )
         let listing = PropertyListing(
             id: UUID(),
-            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            district: district,
-            area: area.isEmpty ? "待补充" : area,
-            latitude: 31.2304,
-            longitude: 121.4737,
+            name: cleanName,
+            city: cleanCity,
+            district: cleanDistrict.isEmpty
+                ? "待补充"
+                : cleanDistrict,
+            area: cleanArea.isEmpty
+                ? "待补充"
+                : cleanArea,
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
             totalPrice: totalPrice,
             unitPrice: Int(totalPrice * 10_000 / size),
             size: size,

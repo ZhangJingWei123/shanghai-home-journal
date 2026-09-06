@@ -195,7 +195,7 @@ def main() -> int:
         "--city",
         action="append",
         dest="cities",
-        help="City to include in the app bundle. Defaults to Shanghai.",
+        help="City to include in the app bundle. Repeat to filter; defaults to all 70 cities.",
     )
     parser.add_argument(
         "--output",
@@ -203,7 +203,7 @@ def main() -> int:
         default=Path(__file__).resolve().parents[1] / "HuJu" / "MarketData.json",
     )
     args = parser.parse_args()
-    selected_cities = set(args.cities or ["上海"])
+    selected_cities = set(args.cities) if args.cities else None
 
     articles = discover_articles(args.start_year, args.end_year)
     expected = {
@@ -235,15 +235,15 @@ def main() -> int:
 
     payload = {
         "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "sourceName": "国家统计局 · 上海住宅销售价格指数",
+        "sourceName": "国家统计局 · 70 个大中城市住宅销售价格指数",
         "cities": [
             {"name": city, "records": records}
             for city, records in sorted(cities.items())
-            if city in selected_cities
+            if selected_cities is None or city in selected_cities
         ],
         "sources": sources,
     }
-    missing_cities = selected_cities - set(cities)
+    missing_cities = (selected_cities or set()) - set(cities)
     if missing_cities:
         print(f"Missing selected cities: {sorted(missing_cities)}", file=sys.stderr)
         return 1
