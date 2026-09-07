@@ -8,7 +8,7 @@
 | 主要类别 | 生活 |
 | 次要类别 | 财务 |
 | 版本 | 1.0.0 |
-| 构建号 | 2 |
+| 构建号 | 3 |
 | 包标识 | `com.zhangjingwei.huju` |
 | SKU | `huju-ios-001` |
 | 内容版权 | 2026 Zhang Jingwei |
