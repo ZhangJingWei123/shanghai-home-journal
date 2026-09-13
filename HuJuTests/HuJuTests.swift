@@ -138,6 +138,59 @@ final class HuJuTests: XCTestCase {
         XCTAssertEqual(restored.visibleListings.first?.resolvedCity, "广州")
     }
 
+    @MainActor
+    func testPropertyStoreDeletesOneViewingRecordAndItsPartnerScore() {
+        let suiteName = "HuJuSingleDeletionTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Unable to create isolated UserDefaults suite")
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = PropertyStore(defaults: defaults, loadsSampleData: true)
+        let deletedID = store.listings[0].id
+        let remainingID = store.listings[1].id
+        store.setPartnerScore(9, for: deletedID)
+        store.setPartnerScore(8, for: remainingID)
+
+        XCTAssertTrue(store.delete(deletedID))
+        XCTAssertFalse(store.listings.contains { $0.id == deletedID })
+        XCTAssertNil(store.partnerScores[deletedID])
+        XCTAssertEqual(store.partnerScores[remainingID], 8)
+
+        let restored = PropertyStore(defaults: defaults)
+        XCTAssertFalse(restored.listings.contains { $0.id == deletedID })
+        XCTAssertNotNil(restored.listings.first { $0.id == remainingID })
+    }
+
+    @MainActor
+    func testAddedViewingRecordKeepsPreciseCoordinateForFootprint() {
+        let suiteName = "HuJuFootprintCoordinateTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Unable to create isolated UserDefaults suite")
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = PropertyStore(defaults: defaults)
+        var listing = PropertyStore.samples[0]
+        listing.name = "中环麓岛"
+        listing.city = "上海"
+        listing.district = "宝山区"
+        listing.area = "上大"
+        listing.latitude = 31.306_398
+        listing.longitude = 121.390_330
+
+        store.add(listing)
+
+        XCTAssertEqual(store.visibleListings.count, 1)
+        XCTAssertEqual(store.visibleListings[0].coordinate.latitude, 31.306_398, accuracy: 0.000_001)
+        XCTAssertEqual(store.visibleListings[0].coordinate.longitude, 121.390_330, accuracy: 0.000_001)
+
+        let restored = PropertyStore(defaults: defaults)
+        XCTAssertEqual(restored.listings[0].name, "中环麓岛")
+        XCTAssertEqual(restored.listings[0].latitude, 31.306_398, accuracy: 0.000_001)
+        XCTAssertEqual(restored.listings[0].longitude, 121.390_330, accuracy: 0.000_001)
+    }
+
     func testBudgetSnapshotUsesFirstHomeDownPaymentAndAmortizedLoan() {
         let profile = BudgetProfile(
             totalBudget: 600,

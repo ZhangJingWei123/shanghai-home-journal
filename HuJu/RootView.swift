@@ -1,3 +1,4 @@
+import AVKit
 import Charts
 import MapKit
 import SwiftUI
@@ -98,7 +99,7 @@ private struct CitySelectionView: View {
 
 struct RootView: View {
     @EnvironmentObject private var store: PropertyStore
-    @State private var showAdd = false
+    @State private var showAdd: Bool
     @State private var selectedTab: AppTab
 
     init() {
@@ -114,6 +115,7 @@ struct RootView: View {
         } else {
             .home
         }
+        _showAdd = State(initialValue: arguments.contains("-showAdd"))
         _selectedTab = State(initialValue: initialTab)
     }
 
@@ -881,8 +883,10 @@ private struct JournalView: View {
 }
 
 private struct PropertyDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: PropertyStore
     @State private var showEditor = false
+    @State private var showDeleteConfirmation = false
     let listing: PropertyListing
 
     private var currentListing: PropertyListing {
@@ -945,19 +949,40 @@ private struct PropertyDetailView: View {
         .navigationTitle("看房详情")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {
                     showEditor = true
                 } label: {
                     Image(systemName: "pencil")
                 }
                 .accessibilityLabel("编辑房源")
+
+                Button {
+                    showDeleteConfirmation = true
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .accessibilityLabel("删除看房记录")
             }
         }
         .sheet(isPresented: $showEditor) {
             PropertyEditView(listing: currentListing) { updated in
                 store.update(updated)
             }
+        }
+        .confirmationDialog(
+            "删除这条看房记录？",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("删除 \(currentListing.name)", role: .destructive) {
+                if store.delete(currentListing.id) {
+                    dismiss()
+                }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("记录中的照片和录像也会从本机删除，此操作无法撤销。")
         }
     }
 
@@ -1456,6 +1481,9 @@ private struct PropertyEvidenceDetailView: View {
 private struct PropertyEditView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: PropertyListing
+    @State private var showPlaceSearch = false
+    @State private var importedAddress: String?
+    @State private var importedCoordinate: CLLocationCoordinate2D?
 
     private let originalCity: String
     let onSave: (PropertyListing) -> Void
@@ -1479,6 +1507,18 @@ private struct PropertyEditView: View {
         NavigationStack {
             Form {
                 Section("房源信息") {
+                    Button {
+                        showPlaceSearch = true
+                    } label: {
+                        Label("搜索并更新楼盘位置", systemImage: "mappin.and.ellipse")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(HuJuTheme.green)
+                    }
+                    if let importedAddress {
+                        Label(importedAddress, systemImage: "mappin.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(HuJuTheme.muted)
+                    }
                     TextField("楼盘或小区名", text: $draft.name)
                     TextField("房源标签", text: optionalText(\.unitLabel))
                     TextField("城市", text: optionalText(\.city))
@@ -1538,7 +1578,10 @@ private struct PropertyEditView: View {
                         draft.city = draft.city?.trimmingCharacters(in: .whitespacesAndNewlines)
                         draft.district = draft.district.trimmingCharacters(in: .whitespacesAndNewlines)
                         draft.area = draft.area.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if draft.resolvedCity != originalCity {
+                        if let importedCoordinate {
+                            draft.latitude = importedCoordinate.latitude
+                            draft.longitude = importedCoordinate.longitude
+                        } else if draft.resolvedCity != originalCity {
                             let coordinate = CityCatalog.coordinate(for: draft.resolvedCity)
                             draft.latitude = coordinate.latitude
                             draft.longitude = coordinate.longitude
@@ -1549,6 +1592,22 @@ private struct PropertyEditView: View {
                     }
                     .disabled(!canSave)
                 }
+            }
+        }
+        .sheet(isPresented: $showPlaceSearch) {
+            PropertyPlaceSearchView(initialCity: draft.resolvedCity) { place in
+                draft.name = place.name
+                if !place.city.isEmpty {
+                    draft.city = place.city
+                }
+                if !place.district.isEmpty {
+                    draft.district = place.district
+                }
+                if !place.area.isEmpty {
+                    draft.area = place.area
+                }
+                importedAddress = place.address
+                importedCoordinate = place.coordinate
             }
         }
     }
@@ -2879,6 +2938,166 @@ private struct FieldVisitView: View {
     }
 }
 
+private struct PropertyPlaceCandidate: Identifiable {
+    let id: String
+    let name: String
+    let city: String
+    let district: String
+    let area: String
+    let address: String
+    let coordinate: CLLocationCoordinate2D
+
+    init(mapItem: MKMapItem, query: String, fallbackCity: String) {
+        let placemark = mapItem.placemark
+        let coordinate = placemark.coordinate
+        let mapName = Self.cleaned(mapItem.name)
+        let locality = Self.cleaned(placemark.locality)
+        let administrativeArea = Self.cleaned(placemark.administrativeArea)
+        let subLocality = Self.cleaned(placemark.subLocality)
+        let subAdministrativeArea = Self.cleaned(placemark.subAdministrativeArea)
+        let thoroughfare = Self.cleaned(placemark.thoroughfare)
+        let cleanFallbackCity = CityCatalog.normalized(fallbackCity)
+
+        name = mapName.isEmpty ? query : mapName
+        city = CityCatalog.normalized(
+            !locality.isEmpty
+                ? locality
+                : (!cleanFallbackCity.isEmpty ? cleanFallbackCity : administrativeArea)
+        )
+        district = !subLocality.isEmpty ? subLocality : subAdministrativeArea
+        area = thoroughfare
+        address = Self.cleaned(placemark.title).isEmpty
+            ? [city, district, area].filter { !$0.isEmpty }.joined(separator: " · ")
+            : Self.cleaned(placemark.title)
+        self.coordinate = coordinate
+        id = "\(name)|\(coordinate.latitude)|\(coordinate.longitude)"
+    }
+
+    private static func cleaned(_ value: String?) -> String {
+        value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+}
+
+private struct PropertyPlaceSearchView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @State private var results: [PropertyPlaceCandidate] = []
+    @State private var isSearching = false
+    @State private var errorMessage: String?
+
+    let initialCity: String
+    let onSelect: (PropertyPlaceCandidate) -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: 10) {
+                        TextField("楼盘或小区名", text: $query)
+                            .textInputAutocapitalization(.never)
+                            .submitLabel(.search)
+                            .onSubmit {
+                                Task { await search() }
+                            }
+                        Button {
+                            Task { await search() }
+                        } label: {
+                            if isSearching {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "magnifyingglass")
+                            }
+                        }
+                        .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
+                        .accessibilityLabel("搜索楼盘")
+                    }
+                } footer: {
+                    Text("搜索结果由 Apple 地图提供")
+                }
+
+                if let errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.circle")
+                            .foregroundStyle(HuJuTheme.coral)
+                    }
+                }
+
+                if !results.isEmpty {
+                    Section("搜索结果") {
+                        ForEach(results) { result in
+                            Button {
+                                onSelect(result)
+                                dismiss()
+                            } label: {
+                                HStack(spacing: 12) {
+                                    HuJuIconTile(symbol: "mappin.and.ellipse", size: 38)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(result.name)
+                                            .font(.headline)
+                                            .foregroundStyle(HuJuTheme.ink)
+                                        Text(result.address)
+                                            .font(.caption)
+                                            .foregroundStyle(HuJuTheme.muted)
+                                            .lineLimit(2)
+                                    }
+                                    Spacer()
+                                    Text("导入")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(HuJuTheme.green)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("搜索楼盘")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func search() async {
+        let cleanQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanQuery.isEmpty else { return }
+
+        isSearching = true
+        errorMessage = nil
+        defer { isSearching = false }
+
+        let cleanCity = CityCatalog.normalized(initialCity)
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = [cleanCity, cleanQuery]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        request.resultTypes = [.pointOfInterest, .address]
+        request.region = CityCatalog.region(for: cleanCity.isEmpty ? nil : cleanCity)
+
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            results = response.mapItems.prefix(12).map {
+                PropertyPlaceCandidate(
+                    mapItem: $0,
+                    query: cleanQuery,
+                    fallbackCity: cleanCity
+                )
+            }
+            if results.isEmpty {
+                errorMessage = "没有找到匹配地点，请尝试小区全名或补充城市。"
+            }
+        } catch {
+            results = []
+            errorMessage = "地点搜索失败，请检查网络后重试。"
+        }
+    }
+}
+
 private struct AddPropertyView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
@@ -2901,6 +3120,8 @@ private struct AddPropertyView: View {
     @State private var mediaAttachments: [PropertyMediaAttachment] = []
     @State private var savedListing: PropertyListing?
     @State private var isSaving = false
+    @State private var showPlaceSearch = false
+    @State private var importedPlace: PropertyPlaceCandidate?
 
     let profile: BudgetProfile
     let onSave: (PropertyListing) -> Void
@@ -2958,11 +3179,30 @@ private struct AddPropertyView: View {
                 }
             }
         }
+        .sheet(isPresented: $showPlaceSearch) {
+            PropertyPlaceSearchView(initialCity: city) { place in
+                apply(place)
+            }
+        }
     }
 
     private var propertyForm: some View {
         Form {
             Section("楼盘位置") {
+                Button {
+                    showPlaceSearch = true
+                } label: {
+                    Label("搜索楼盘并一键导入", systemImage: "magnifyingglass")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HuJuTheme.green)
+                }
+
+                if let importedPlace {
+                    Label(importedPlace.address, systemImage: "mappin.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(HuJuTheme.muted)
+                }
+
                 TextField("楼盘或小区名", text: $name)
                 HStack {
                     TextField("城市（必填）", text: $city)
@@ -3068,6 +3308,20 @@ private struct AddPropertyView: View {
         .background(HuJuTheme.paper)
     }
 
+    private func apply(_ place: PropertyPlaceCandidate) {
+        name = place.name
+        if !place.city.isEmpty {
+            city = place.city
+        }
+        if !place.district.isEmpty {
+            district = place.district
+        }
+        if !place.area.isEmpty {
+            area = place.area
+        }
+        importedPlace = place
+    }
+
     private func save() async {
         isSaving = true
         defer { isSaving = false }
@@ -3076,12 +3330,17 @@ private struct AddPropertyView: View {
         let cleanDistrict = district.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanArea = area.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let coordinate = await CityCatalog.resolveCoordinate(
-            city: cleanCity,
-            district: cleanDistrict,
-            area: cleanArea,
-            name: cleanName
-        )
+        let coordinate: CLLocationCoordinate2D
+        if let importedPlace {
+            coordinate = importedPlace.coordinate
+        } else {
+            coordinate = await CityCatalog.resolveCoordinate(
+                city: cleanCity,
+                district: cleanDistrict,
+                area: cleanArea,
+                name: cleanName
+            )
+        }
         let listing = PropertyListing(
             id: UUID(),
             name: cleanName,
@@ -3206,6 +3465,12 @@ enum LocalPropertyMediaStore {
         }
     }
 
+    static func url(for attachment: PropertyMediaAttachment) -> URL? {
+        guard let directory = try? mediaDirectory() else { return nil }
+        let url = directory.appendingPathComponent(attachment.fileName)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
     private static func mediaDirectory() throws -> URL {
         let base = try FileManager.default.url(
             for: .applicationSupportDirectory,
@@ -3222,12 +3487,80 @@ enum LocalPropertyMediaStore {
     }
 }
 
+private struct PropertyMediaViewer: View {
+    @Environment(\.dismiss) private var dismiss
+    let attachment: PropertyMediaAttachment
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                if let url = LocalPropertyMediaStore.url(for: attachment) {
+                    switch attachment.kind {
+                    case .photo:
+                        if let image = UIImage(contentsOfFile: url.path) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                        } else {
+                            unavailableContent
+                        }
+                    case .video:
+                        PropertyVideoPlayer(url: url)
+                    }
+                } else {
+                    unavailableContent
+                }
+            }
+            .navigationTitle(attachment.kind.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.black.opacity(0.8), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("关闭")
+                }
+            }
+        }
+    }
+
+    private var unavailableContent: some View {
+        ContentUnavailableView(
+            "找不到这项影像",
+            systemImage: "exclamationmark.triangle",
+            description: Text("文件可能已从设备中移除。")
+        )
+        .foregroundStyle(.white)
+    }
+}
+
+private struct PropertyVideoPlayer: View {
+    @State private var player: AVPlayer
+
+    init(url: URL) {
+        _player = State(initialValue: AVPlayer(url: url))
+    }
+
+    var body: some View {
+        VideoPlayer(player: player)
+            .onAppear { player.play() }
+            .onDisappear { player.pause() }
+    }
+}
+
 private struct PropertyMediaCaptureControls: View {
     let attachments: [PropertyMediaAttachment]
     let onCaptured: (PropertyMediaAttachment) -> Void
 
     @State private var captureMode: CameraCaptureMode?
     @State private var alertMessage: String?
+    @State private var selectedAttachment: PropertyMediaAttachment?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -3242,12 +3575,30 @@ private struct PropertyMediaCaptureControls: View {
                     .foregroundStyle(HuJuTheme.muted)
             } else {
                 ForEach(attachments) { attachment in
-                    Label(
-                        "\(attachment.kind.title) · \(attachment.createdAt.formatted(date: .omitted, time: .shortened))",
-                        systemImage: attachment.kind.symbol
+                    Button {
+                        selectedAttachment = attachment
+                    } label: {
+                        HStack(spacing: 12) {
+                            attachmentThumbnail(attachment)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(attachment.kind.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HuJuTheme.ink)
+                                Text(attachment.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(HuJuTheme.muted)
+                            }
+                            Spacer()
+                            Image(systemName: attachment.kind == .video ? "play.circle.fill" : "arrow.up.left.and.arrow.down.right")
+                                .font(.title3)
+                                .foregroundStyle(HuJuTheme.green)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(
+                        attachment.kind == .video ? "播放视频" : "查看照片"
                     )
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(HuJuTheme.ink)
                 }
             }
         }
@@ -3272,6 +3623,32 @@ private struct PropertyMediaCaptureControls: View {
             Button("知道了", role: .cancel) {}
         } message: {
             Text(alertMessage ?? "")
+        }
+        .fullScreenCover(item: $selectedAttachment) { attachment in
+            PropertyMediaViewer(attachment: attachment)
+        }
+    }
+
+    @ViewBuilder
+    private func attachmentThumbnail(_ attachment: PropertyMediaAttachment) -> some View {
+        if
+            attachment.kind == .photo,
+            let url = LocalPropertyMediaStore.url(for: attachment),
+            let image = UIImage(contentsOfFile: url.path)
+        {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 58, height: 46)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        } else {
+            Image(systemName: attachment.kind.symbol)
+                .font(.title3)
+                .foregroundStyle(attachment.kind == .video ? HuJuTheme.coral : HuJuTheme.blue)
+                .frame(width: 58, height: 46)
+                .background(HuJuTheme.surfaceMuted)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
         }
     }
 

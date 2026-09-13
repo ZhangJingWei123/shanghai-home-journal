@@ -136,6 +136,19 @@ final class PropertyStore: ObservableObject {
         persist()
     }
 
+    @discardableResult
+    func delete(_ id: UUID) -> Bool {
+        guard let index = listings.firstIndex(where: { $0.id == id }) else { return false }
+        LocalPropertyMediaStore.remove(listings[index].mediaAttachments ?? [])
+        listings.remove(at: index)
+        partnerScores.removeValue(forKey: id)
+        if listings.isEmpty {
+            isUsingSampleData = false
+        }
+        persist()
+        return true
+    }
+
     func addMediaAttachment(_ attachment: PropertyMediaAttachment, for id: UUID) {
         guard let index = listings.firstIndex(where: { $0.id == id }) else { return }
         var attachments = listings[index].mediaAttachments ?? []
